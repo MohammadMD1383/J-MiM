@@ -15,6 +15,7 @@ data class Token(
 		STR("String Literal"),
 		EOS("End of Statement"),
 		PAC("Property Accessor"),
+		SEP("Separator"),
 		LPR("Left Parenthesis"),
 		RPR("Right Parenthesis"),
 		LBR("Left Bracket"),

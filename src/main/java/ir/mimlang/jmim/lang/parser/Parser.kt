@@ -28,17 +28,68 @@ class Parser(private val tokens: List<Token>) {
 	
 	fun parse(): List<Node> = nodes.apply {
 		while (peekedToken != null) add(
-			expectFunctionDeclaration()
-				?: expectVariableDeclaration()
-				?: expectStatement()
-				?: expectBinaryOperation()
-				?: expectParenthesizedOperation()
-				?: throw ParserException("couldn't parse...")
+			expectRoot() ?: throw ParserException("couldn't parse...")
 		)
 	}
 	
-	private fun expectFunctionDeclaration(): FunctionDeclarationNode? {
+	private fun expectRoot() = (
+		expectFunctionDeclaration()
+			?: expectVariableDeclaration()
+			?: expectStatement() // fixme: needs binary_op and paren_op to be in this expectation
+			?: expectBinaryOperation()
+			?: expectParenthesizedOperation()
+		)
 	
+	private fun expectFunctionDeclaration(): FunctionDeclarationNode? {
+		save()
+		
+		expectKeyword("func") ?: run { restore(); return null }
+		val name = expectIdentifier() ?: run { restore(); return null }
+		val params = mutableListOf<String>().apply {
+			save()
+			expectLeftParenthesis() ?: run { restore(); return@apply }
+			
+			while (true) {
+				add(expectIdentifier()?.name ?: break)
+				expectSeparator() ?: break
+			}
+			
+			expectRightParenthesis() ?: run { restore(); return@apply }
+			removeSaved()
+		}
+		val body = mutableListOf<Node>().apply {
+			expectLeftBracket() ?: run { restore(); return null }
+			while (true) add(expectRoot() ?: break)
+			expectRightBracket() ?: run { restore(); return null }
+		}
+		
+		removeSaved()
+		return FunctionDeclarationNode(name.name, params, body)
+	}
+	
+	private fun expectFunctionCall(): FunctionCallNode? {
+		save()
+		
+		val name = expectIdentifier() ?: run { restore(); return null }
+		val params = mutableListOf<Node>().apply {
+			expectLeftParenthesis() ?: run { restore(); return null }
+			
+			while (true) {
+				add(
+					expectFunctionCall()
+						?: expectBinaryOperation()
+						?: expectIdentifier()
+						?: expectNumber()
+						?: break
+				)
+				expectSeparator() ?: break
+			}
+			
+			expectRightParenthesis() ?: run { restore(); return null }
+		}
+		
+		removeSaved()
+		return FunctionCallNode(name.name, params)
 	}
 	
 	private fun expectVariableDeclaration(): VariableDeclarationNode? {
@@ -47,7 +98,12 @@ class Parser(private val tokens: List<Token>) {
 		expectKeyword("var") ?: run { restore(); return null }
 		val name = expectIdentifier() ?: run { restore(); return null }
 		val value = expectOperator("=")?.run {
-			expectNumber()
+			expectBinaryOperation()
+				?: expectParenthesizedOperation()
+				?: expectIdentifier()
+				?: expectNumber()
+				?: expectString()
+				?: run { restore(); return null }
 		}
 		expectEndOfStatement() ?: run { restore(); return null }
 		
@@ -58,7 +114,9 @@ class Parser(private val tokens: List<Token>) {
 	private fun expectStatement(): StatementNode? {
 		save()
 		
-		val node = expectBinaryOperation() ?: run { restore(); return null }
+		val node = expectFunctionCall()
+			?: expectBinaryOperation()
+			?: run { restore(); return null }
 		expectEndOfStatement() ?: run { restore(); return null }
 		
 		removeSaved()
@@ -71,6 +129,7 @@ class Parser(private val tokens: List<Token>) {
 		val lhs = expectParenthesizedOperation()
 			?: expectIdentifier()
 			?: expectNumber()
+			?: expectString()
 			?: run { restore(); return null }
 		
 		val op = expectOperator()
@@ -80,6 +139,7 @@ class Parser(private val tokens: List<Token>) {
 			?: expectParenthesizedOperation()
 			?: expectIdentifier()
 			?: expectNumber()
+			?: expectString()
 			?: run { restore(); return null }
 		
 		removeSaved()
@@ -121,6 +181,20 @@ class Parser(private val tokens: List<Token>) {
 		}
 	}
 	
+	private fun expectLeftBracket(): Token? {
+		return when (peekedToken?.type) {
+			TType.LBR -> nextToken
+			else -> null
+		}
+	}
+	
+	private fun expectRightBracket(): Token? {
+		return when (peekedToken?.type) {
+			TType.RBR -> nextToken
+			else -> null
+		}
+	}
+	
 	private fun expectOperator(): String? {
 		return when (peekedToken?.type) {
 			TType.OP -> nextToken!!.value
@@ -138,7 +212,7 @@ class Parser(private val tokens: List<Token>) {
 	
 	private fun expectIdentifier(): IdentifierNode? {
 		return when (peekedToken?.type) {
-			TType.ID -> nextToken!!.value.node
+			TType.ID -> nextToken!!.value.idNode
 			else -> null
 		}
 	}
@@ -146,6 +220,20 @@ class Parser(private val tokens: List<Token>) {
 	private fun expectEndOfStatement(): Token? {
 		return when (peekedToken?.type) {
 			TType.EOS -> nextToken
+			else -> null
+		}
+	}
+	
+	private fun expectSeparator(): Token? {
+		return when (peekedToken?.type) {
+			TType.SEP -> nextToken
+			else -> null
+		}
+	}
+	
+	private fun expectString(): StringNode? {
+		return when (peekedToken?.type) {
+			TType.STR -> nextToken!!.value.node
 			else -> null
 		}
 	}

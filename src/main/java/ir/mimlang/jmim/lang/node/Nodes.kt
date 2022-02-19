@@ -10,6 +10,10 @@ data class IdentifierNode(val name: String) : Node {
 	override fun toString(): String = name
 }
 
+data class StringNode(val string: String) : Node {
+	override fun toString(): String = string
+}
+
 data class ParenthesizedOperationNode(val node: Node) : Node {
 	override fun toString(): String = "($node)"
 }
@@ -39,4 +43,11 @@ data class FunctionDeclarationNode(
 	val body: List<Node>
 ) : Node {
 	override fun toString(): String = "func $name(${params.joinToString()}) {\n${body.joinToString("\n")}\n}"
+}
+
+data class FunctionCallNode(
+	val name: String,
+	val params: List<Node>
+) : Node {
+	override fun toString(): String = "$name(${params.joinToString()})"
 }

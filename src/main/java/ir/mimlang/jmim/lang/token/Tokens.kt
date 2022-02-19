@@ -11,6 +11,7 @@ val NUMBER_CHAR = Regex("[0-9]")
 val OP_CHAR = Regex("[-+*/%=!~|&<^>]")
 val EOS_CHAR = Regex("[;]")
 val PROPERTY_ACCESSOR_CHAR = Regex("[.]")
+val SEPARATOR_CHAR = Regex("[,]")
 val STRING_CHAR = Regex("[\"]")
 val LPR_CHAR = Regex("[(]")
 val RPR_CHAR = Regex("[)]")
@@ -41,6 +42,10 @@ infix fun MutableList<Token>.addEndOfStatement(builder: TokenBuilder) {
 
 infix fun MutableList<Token>.addPropertyAccessor(builder: TokenBuilder) {
 	add(Token(TType.PAC, builder.value, builder.range))
+}
+
+infix fun MutableList<Token>.addSeparator(builder: TokenBuilder) {
+	add(Token(TType.SEP, builder.value, builder.range))
 }
 
 infix fun MutableList<Token>.addLeftParenthesis(builder: TokenBuilder) {

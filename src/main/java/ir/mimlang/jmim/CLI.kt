@@ -25,7 +25,7 @@ fun main(args: Array<String>) {
 	
 	val code =
 		"""
-			var demo = 5;
+			stdstream += "Hello World";
 		""".trimIndent()
 	
 	try {
