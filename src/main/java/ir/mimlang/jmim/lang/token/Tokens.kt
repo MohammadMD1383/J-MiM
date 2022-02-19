@@ -1,7 +1,7 @@
 package ir.mimlang.jmim.lang.token
 
-import ir.mimlang.jmim.util.ext.equals
-import ir.mimlang.jmim.util.ext.or
+import ir.mimlang.jmim.lang.util.ext.equals
+import ir.mimlang.jmim.lang.util.ext.or
 
 typealias TType = Token.Type
 
@@ -14,38 +14,49 @@ val PROPERTY_ACCESSOR_CHAR = Regex("[.]")
 val STRING_CHAR = Regex("[\"]")
 val LPR_CHAR = Regex("[(]")
 val RPR_CHAR = Regex("[)]")
+val LBR_CHAR = Regex("[{]")
+val RBR_CHAR = Regex("[}]")
 val IGNORED_CHAR = Regex("[\n\t ]")
 
-infix fun MutableList<Token>.addIdentifier(value: StringBuilder) {
-	add(Token(TType.ID, value.toString()))
+infix fun MutableList<Token>.addIdentifier(builder: TokenBuilder) {
+	add(Token(TType.ID, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addNumber(value: StringBuilder) {
-	add(Token(if ('.' in value) TType.FLT else TType.INT, value.toString()))
+infix fun MutableList<Token>.addNumber(builder: TokenBuilder) {
+	val type = if ('.' in builder.value) TType.FLT else TType.INT
+	add(Token(type, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addOperator(value: StringBuilder) {
-	add(Token(TType.OP, value.toString()))
+infix fun MutableList<Token>.addOperator(builder: TokenBuilder) {
+	add(Token(TType.OP, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addString(value: StringBuilder) {
-	add(Token(TType.STR, value.toString()))
+infix fun MutableList<Token>.addString(builder: TokenBuilder) {
+	add(Token(TType.STR, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addEndOfStatement(value: StringBuilder) {
-	add(Token(TType.EOS, value.toString()))
+infix fun MutableList<Token>.addEndOfStatement(builder: TokenBuilder) {
+	add(Token(TType.EOS, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addPropertyAccessor(value: StringBuilder) {
-	add(Token(TType.PAC, value.toString()))
+infix fun MutableList<Token>.addPropertyAccessor(builder: TokenBuilder) {
+	add(Token(TType.PAC, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addLeftParenthesis(value: StringBuilder) {
-	add(Token(TType.LPR, value.toString()))
+infix fun MutableList<Token>.addLeftParenthesis(builder: TokenBuilder) {
+	add(Token(TType.LPR, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addRightParenthesis(value: StringBuilder) {
-	add(Token(TType.RPR, value.toString()))
+infix fun MutableList<Token>.addRightParenthesis(builder: TokenBuilder) {
+	add(Token(TType.RPR, builder.value, builder.range))
+}
+
+infix fun MutableList<Token>.addLeftBracket(builder: TokenBuilder) {
+	add(Token(TType.LBR, builder.value, builder.range))
+}
+
+infix fun MutableList<Token>.addRightBracket(builder: TokenBuilder) {
+	add(Token(TType.RBR, builder.value, builder.range))
 }
 
 infix fun StringBuilder.operatorCanMergeWith(other: Char?): Boolean = when (this.toString()) {

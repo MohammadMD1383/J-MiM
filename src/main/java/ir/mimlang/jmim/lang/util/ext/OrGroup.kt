@@ -1,4 +1,4 @@
-package ir.mimlang.jmim.util.ext
+package ir.mimlang.jmim.lang.util.ext
 
 class OrGroup<T>(lhs: T, rhs: T) {
 	val operands: MutableList<T> = mutableListOf()

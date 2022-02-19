@@ -2,8 +2,15 @@ package ir.mimlang.jmim
 
 import ir.mimlang.jmim.lang.lexer.Lexer
 import ir.mimlang.jmim.lang.lexer.LexerException
+import ir.mimlang.jmim.lang.parser.Parser
+import ir.mimlang.jmim.util.color
+import ir.mimlang.jmim.util.ext.line
+import ir.mimlang.jmim.util.ext.times
+import ir.mimlang.jmim.util.printTree
+import ir.mimlang.jmim.util.visual
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
+
 
 fun main(args: Array<String>) {
 	val parser = ArgParser("mim")
@@ -16,13 +23,23 @@ fun main(args: Array<String>) {
 	// 	exitProcess(1)
 	// }
 	
+	val code =
+		"""
+			var demo = 5;
+		""".trimIndent()
+	
 	try {
-		Lexer(
-			"""
-				var demo = 12.5;
-			""".trimIndent()
-		).lex().forEach(::println)
+		val tokens = Lexer(code).lex()
+		val nodes = Parser(tokens).parse()
+		nodes.forEach { printTree(it.visual) }
 	} catch (e: LexerException) {
-		println("error while lexing file: ${e.message}")
+		println(
+			"""
+				${color.red}error while lexing file: ${color.bold}${e.message}${color.normal}
+				${color.bold}at ${e.position.line}:${e.position.column}:${color.normal}
+				${code line e.position.line}
+				${color.red.bold}${" " * e.position.column}^${color.normal}
+			""".trimIndent()
+		)
 	}
 }

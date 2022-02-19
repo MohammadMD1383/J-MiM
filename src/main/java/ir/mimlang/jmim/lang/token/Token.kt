@@ -1,8 +1,11 @@
 package ir.mimlang.jmim.lang.token
 
+import ir.mimlang.jmim.lang.util.TextRange
+
 data class Token(
 	val type: Type,
-	val value: String
+	val value: String,
+	val range: TextRange
 ) {
 	enum class Type(private val repr: String) {
 		ID("Identifier"),
@@ -13,7 +16,9 @@ data class Token(
 		EOS("End of Statement"),
 		PAC("Property Accessor"),
 		LPR("Left Parenthesis"),
-		RPR("Right Parenthesis");
+		RPR("Right Parenthesis"),
+		LBR("Left Bracket"),
+		RBR("Right Bracket");
 		
 		override fun toString(): String = repr
 	}
