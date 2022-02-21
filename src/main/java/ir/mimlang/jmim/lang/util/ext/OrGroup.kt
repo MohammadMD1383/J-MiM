@@ -8,9 +8,7 @@ class OrGroup<T>(lhs: T, rhs: T) {
 		operands.add(rhs)
 	}
 	
-	infix fun or(operand: T) {
-		operands.add(operand)
-	}
+	infix fun or(operand: T): OrGroup<T> = this.apply { operands.add(operand) }
 }
 
 infix fun <T> T.or(other: T): OrGroup<T> = OrGroup(this, other)

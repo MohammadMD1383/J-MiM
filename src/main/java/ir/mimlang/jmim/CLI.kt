@@ -1,13 +1,16 @@
 package ir.mimlang.jmim
 
+import ir.mimlang.jmim.lang.interpreter.Interpreter
+import ir.mimlang.jmim.lang.interpreter.InterpreterException
 import ir.mimlang.jmim.lang.lexer.Lexer
 import ir.mimlang.jmim.lang.lexer.LexerException
 import ir.mimlang.jmim.lang.parser.Parser
+import ir.mimlang.jmim.lang.parser.ParserException
+import ir.mimlang.jmim.lang.std.StdContext
 import ir.mimlang.jmim.util.color
 import ir.mimlang.jmim.util.ext.line
+import ir.mimlang.jmim.util.ext.lines
 import ir.mimlang.jmim.util.ext.times
-import ir.mimlang.jmim.util.printTree
-import ir.mimlang.jmim.util.visual
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
 
@@ -25,13 +28,15 @@ fun main(args: Array<String>) {
 	
 	val code =
 		"""
-			stdstream += "Hello World";
+			stdstream = stdstream = "Hello";
 		""".trimIndent()
 	
 	try {
 		val tokens = Lexer(code).lex()
 		val nodes = Parser(tokens).parse()
-		nodes.forEach { printTree(it.visual) }
+		val context = StdContext("<readline>")
+		val interpreter = Interpreter(context)
+		nodes.forEach(interpreter::interpret)
 	} catch (e: LexerException) {
 		println(
 			"""
@@ -41,5 +46,19 @@ fun main(args: Array<String>) {
 				${color.red.bold}${" " * e.position.column}^${color.normal}
 			""".trimIndent()
 		)
+	} catch (e: ParserException) {
+		println("parse error at: ${e.range}")
+		e.printStackTrace()
+	} catch (e: InterpreterException) {
+		println(
+			"""
+				${color.red}${e.message}${color.normal}
+				${color.bold}at ${e.range}:${color.normal}
+				${code lines e.range.start.line..e.range.end.line}
+				-------------------------------------------------------
+				stacktrace:
+			""".trimIndent()
+		)
+		e.printStackTrace()
 	}
 }

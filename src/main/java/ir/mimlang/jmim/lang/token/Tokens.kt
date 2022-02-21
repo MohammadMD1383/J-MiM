@@ -13,11 +13,27 @@ val EOS_CHAR = Regex("[;]")
 val PROPERTY_ACCESSOR_CHAR = Regex("[.]")
 val SEPARATOR_CHAR = Regex("[,]")
 val STRING_CHAR = Regex("[\"]")
+val RAW_STRING_CHAR = Regex("[']")
 val LPR_CHAR = Regex("[(]")
 val RPR_CHAR = Regex("[)]")
 val LBR_CHAR = Regex("[{]")
 val RBR_CHAR = Regex("[}]")
+val COMMENT_CHAR = Regex("[#]")
 val IGNORED_CHAR = Regex("[\n\t ]")
+
+val PRE_UN_OPS = listOf("!", "~", "-", "--", "++")
+val POS_UN_OPS = listOf("--", "++")
+val BIN_OPS = listOf(
+	"=", "==", "!=",
+	"&", "&&", "&=",
+	"|", "||", "|=",
+	">", ">=", "<", "<=",
+	"+", "+=", "-", "-=",
+	"*", "*=", "/", "/=",
+	"%", "%=", "^", "^=",
+	"<<", "<<=", ">>", ">>=", ">>>",
+	"~="
+)
 
 infix fun MutableList<Token>.addIdentifier(builder: TokenBuilder) {
 	add(Token(TType.ID, builder.value, builder.range))
@@ -34,6 +50,10 @@ infix fun MutableList<Token>.addOperator(builder: TokenBuilder) {
 
 infix fun MutableList<Token>.addString(builder: TokenBuilder) {
 	add(Token(TType.STR, builder.value, builder.range))
+}
+
+infix fun MutableList<Token>.addRawString(builder: TokenBuilder) {
+	add(Token(TType.RSTR, builder.value, builder.range))
 }
 
 infix fun MutableList<Token>.addEndOfStatement(builder: TokenBuilder) {
@@ -64,6 +84,10 @@ infix fun MutableList<Token>.addRightBracket(builder: TokenBuilder) {
 	add(Token(TType.RBR, builder.value, builder.range))
 }
 
+infix fun MutableList<Token>.addComment(builder: TokenBuilder) {
+	add(Token(TType.CMT, builder.value, builder.range))
+}
+
 infix fun StringBuilder.operatorCanMergeWith(other: Char?): Boolean = when (this.toString()) {
 	"-" -> other equals ('-' or '=')
 	"+" -> other equals ('+' or '=')
@@ -75,8 +99,10 @@ infix fun StringBuilder.operatorCanMergeWith(other: Char?): Boolean = when (this
 	"~" -> other equals ('=')
 	"|" -> other equals ('|' or '=')
 	"&" -> other equals ('&' or '=')
-	"<" -> other equals ('=')
+	"<" -> other equals ('=' or '<')
 	"^" -> other equals ('=')
-	">" -> other equals ('=')
+	">" -> other equals ('=' or '>')
+	">>" -> other equals ('=' or '>')
+	"<<" -> other equals ('=')
 	else -> false
 }

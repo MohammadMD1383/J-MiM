@@ -84,6 +84,18 @@ class Lexer {
 					append(nextChar ?: throw LexerException("Found EOF instead of '\"' character") at currentPosition)
 				}.locatedFrom(startingPosition to currentPosition)
 				
+				in RAW_STRING_CHAR -> tokens addRawString currentChar!!.builder().apply {
+					while (peekedChar != null && peekedChar !in RAW_STRING_CHAR) {
+						append(nextChar)
+					}
+					append(nextChar ?: throw LexerException("Found EOF instead of ' character") at currentPosition)
+				}.locatedFrom(startingPosition to currentPosition)
+				
+				in COMMENT_CHAR -> tokens addComment currentChar!!.builder().apply {
+					while (peekedChar != null && peekedChar != '\n' && peekedChar !in COMMENT_CHAR) append(nextChar)
+					if (peekedChar in COMMENT_CHAR) append(nextChar)
+				}.locatedFrom(startingPosition to currentPosition)
+				
 				in PROPERTY_ACCESSOR_CHAR -> tokens addPropertyAccessor currentChar!!.locatedAt(currentPosition)
 				in SEPARATOR_CHAR -> tokens addSeparator currentChar!!.locatedAt(currentPosition)
 				in EOS_CHAR -> tokens addEndOfStatement currentChar!!.locatedAt(currentPosition)

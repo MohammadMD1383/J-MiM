@@ -13,13 +13,15 @@ data class Token(
 		FLT("Float"),
 		OP("Operator"),
 		STR("String Literal"),
+		RSTR("Raw String"),
 		EOS("End of Statement"),
 		PAC("Property Accessor"),
 		SEP("Separator"),
 		LPR("Left Parenthesis"),
 		RPR("Right Parenthesis"),
 		LBR("Left Bracket"),
-		RBR("Right Bracket");
+		RBR("Right Bracket"),
+		CMT("Comment");
 		
 		override fun toString(): String = repr
 	}
