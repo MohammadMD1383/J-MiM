@@ -96,3 +96,10 @@ data class MemberAccessNode(
 ) : Node {
 	override fun toString(): String = "$name.$member"
 }
+
+data class IfStatementNode(
+	val ifBranch: Pair<Node, List<Node>>,
+	val elifBranches: List<Pair<Node, List<Node>>>?,
+	val elseBranch: List<Node>?,
+	override val range: TextRange
+) : Node

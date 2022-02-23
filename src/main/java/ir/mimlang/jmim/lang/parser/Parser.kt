@@ -2,6 +2,8 @@ package ir.mimlang.jmim.lang.parser
 
 import ir.mimlang.jmim.lang.node.*
 import ir.mimlang.jmim.lang.token.*
+import ir.mimlang.jmim.lang.util.Position
+import ir.mimlang.jmim.lang.util.TextRange
 
 class Parser(tokens: List<Token>) {
 	private val tokens: List<Token>
@@ -17,30 +19,126 @@ class Parser(tokens: List<Token>) {
 	private val peekedToken: Token? get() = tokens.getOrNull(tokenIndex + 1)
 	private val nextToken: Token? get() = tokens.getOrNull(++tokenIndex)
 	
+	private var processedRange = 0 to 0
+	
 	private fun save() {
 		savedIndexes.add(tokenIndex)
+		
+		if (tokenIndex < processedRange.first && tokenIndex > 0)
+			processedRange = processedRange.copy(first = tokenIndex)
 	}
 	
 	private fun restore() {
+		if (tokenIndex > processedRange.second)
+			processedRange = processedRange.copy(second = tokenIndex)
+		
 		tokenIndex = savedIndexes.last()
 		savedIndexes.removeLast()
 	}
 	
 	private fun removeSaved() {
+		if (tokenIndex > processedRange.second)
+			processedRange = processedRange.copy(second = tokenIndex)
+		
 		savedIndexes.removeLast()
 	}
 	
 	fun parse(): List<Node> = nodes.apply {
-		while (peekedToken != null) add(
-			expectRoot() ?: throw ParserException("couldn't parse...") at currentToken?.range
-		)
+		while (peekedToken != null) {
+			add(
+				expectRoot()
+					?: throw ParserException() at tokens[processedRange.first].range.start..tokens[processedRange.second].range.end
+			)
+			processedRange = 0 to 0
+		}
 	}
 	
 	private fun expectRoot() = (
-		expectFunctionDeclaration()
+		expectIfStatement()
+			?: expectFunctionDeclaration()
 			?: expectVariableDeclaration()
 			?: expectStatement()
 		)
+	
+	private fun expectIfStatement(): IfStatementNode? {
+		save()
+		
+		/* if (...) {...} */
+		/*val ifKw =*/ expectKeyword("if") ?: run { restore(); return null }
+		val ifCond = expectParenthesizedOperation()?.node ?: run { restore(); return null }
+		expectLeftBracket() ?: run { restore(); return null }
+		val ifBody = mutableListOf<Node>().apply {
+			while (true) add(expectRoot() ?: break)
+		}
+		/*val ifEndBracket =*/ expectRightBracket() ?: run { restore(); return null }
+		
+		/* elif (...) {...} */
+		var elifStatements: MutableList<Pair<Node, List<Node>>>? = mutableListOf()
+		while (true) {
+			save()
+			
+			if (expectKeyword("elif") == null) {
+				restore()
+				break
+			}
+			
+			val elifCond = expectParenthesizedOperation()?.node
+			if (elifCond == null) {
+				restore()
+				break
+			}
+			
+			if (expectLeftBracket() == null) {
+				restore()
+				break
+			}
+			
+			val elifBody = mutableListOf<Node>().apply {
+				while (true) add(expectRoot() ?: break)
+			}
+			
+			if (expectRightBracket() == null) {
+				restore()
+				break
+			}
+			
+			removeSaved()
+			elifStatements!!.add(elifCond to elifBody)
+		}
+		if (elifStatements!!.isEmpty()) elifStatements = null
+		
+		/* else {...} */
+		var elseStatements: MutableList<Node>? = mutableListOf()
+		val elseCaught = run {
+			save()
+			
+			if (expectKeyword("else") == null) {
+				restore()
+				return@run false
+			}
+			
+			if (expectLeftBracket() == null) {
+				restore()
+				return@run false
+			}
+			
+			while (true) elseStatements!!.add(expectRoot() ?: break)
+			
+			if (expectRightBracket() == null) {
+				restore()
+				return@run false
+			}
+			
+			removeSaved()
+			return@run true
+		}
+		if (!elseCaught) elseStatements = null
+		
+		/* returning if statement */
+		removeSaved()
+		return IfStatementNode(ifCond to ifBody, elifStatements, elseStatements, TextRange(Position(0, 0), Position(0, 0)))
+		//fixme: range
+	}
 	
 	private fun expectFunctionDeclaration(): FunctionDeclarationNode? {
 		save()
@@ -207,6 +305,7 @@ class Parser(tokens: List<Token>) {
 		val node = expectUnaryOperation()
 			?: expectBinaryOperation()
 			?: expectParenthesizedOperation()
+			?: expectIdentifier()
 			?: run { restore(); return null }
 		
 		val rpr = expectRightParenthesis()

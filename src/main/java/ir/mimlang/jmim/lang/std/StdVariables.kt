@@ -2,6 +2,7 @@ package ir.mimlang.jmim.lang.std
 
 import ir.mimlang.jmim.lang.ctx.Context
 import ir.mimlang.jmim.lang.ctx.Variable
+import kotlin.random.Random.Default.nextLong
 
 val StdStream = object : Variable {
 	override val name: String get() = "stdstream"
@@ -41,4 +42,31 @@ val True = object : Variable {
 val False = object : Variable {
 	override val name: String get() = "false"
 	override fun getValue(): Boolean = false
+}
+
+val Integer = object : Variable {
+	override val name: String get() = "integer"
+	
+	override fun invoke(context: Context): Any? {
+		val params = context.getParams()
+			?: throw Exception("params not found")
+		
+		if (params.size == 1) return (params[0] as String).toLong()
+		else throw Exception("integer function only accepts one parameter")
+	}
+}
+
+val Random = object : Variable {
+	override val name: String get() = "random"
+	
+	override fun getValue(): Long = nextLong()
+	override fun invoke(context: Context): Long {
+		val params = context.getParams() ?: throw Exception("params not found")
+		return when (params.size) {
+			0 -> nextLong()
+			1 -> nextLong(params[0] as Long)
+			2 -> nextLong(params[0] as Long, params[1] as Long)
+			else -> throw Exception("random function only accepts 1 or 2 parameters")
+		}
+	}
 }

@@ -28,7 +28,15 @@ fun main(args: Array<String>) {
 	
 	val code =
 		"""
-			stdstream = stdstream = "Hello";
+			var age = integer(stdstream("how old are you? "));
+			
+			if ((age > 0) && (age <= 18)) {
+				stdstream = "you're a teenager";
+			} elif (age > 18) {
+				stdstream = "you're a mature person";
+			} else {
+				stdstream = "hmm idk who are you";
+			}
 		""".trimIndent()
 	
 	try {
@@ -47,7 +55,10 @@ fun main(args: Array<String>) {
 			""".trimIndent()
 		)
 	} catch (e: ParserException) {
-		println("parse error at: ${e.range}")
+		println("${color.red}syntax error: couldn't parse statement at ${e.range}${color.normal}")
+		println(code lines e.range.start.line..e.range.end.line)
+		println("------------------------------------------------------")
+		println("stacktrace:")
 		e.printStackTrace()
 	} catch (e: InterpreterException) {
 		println(
