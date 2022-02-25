@@ -44,14 +44,26 @@ val False = object : Variable {
 	override fun getValue(): Boolean = false
 }
 
-val Integer = object : Variable {
-	override val name: String get() = "integer"
+val IntValueOf = object : Variable {
+	override val name: String get() = "int"
 	
-	override fun invoke(context: Context): Any? {
+	override fun invoke(context: Context): Long {
 		val params = context.getParams()
 			?: throw Exception("params not found")
 		
 		if (params.size == 1) return (params[0] as String).toLong()
+		else throw Exception("integer function only accepts one parameter")
+	}
+}
+
+val StringValueOf = object : Variable {
+	override val name: String get() = "str"
+	
+	override fun invoke(context: Context): String {
+		val params = context.getParams()
+			?: throw Exception("params not found")
+		
+		if (params.size == 1) return params[0].toString()
 		else throw Exception("integer function only accepts one parameter")
 	}
 }

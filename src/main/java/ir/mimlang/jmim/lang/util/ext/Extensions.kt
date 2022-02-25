@@ -11,3 +11,9 @@ infix fun <T> T.equals(other: T): Boolean = this == other
 inline infix fun Boolean.then(block: () -> Unit) {
 	if (this) block()
 }
+
+infix fun String.prepend(str: String) = str + this
+
+inline infix fun Long.repeat(block: (Long) -> Unit) {
+	for (i in 1..this) block(i)
+}

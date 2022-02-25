@@ -7,6 +7,7 @@ import ir.mimlang.jmim.lang.lexer.LexerException
 import ir.mimlang.jmim.lang.parser.Parser
 import ir.mimlang.jmim.lang.parser.ParserException
 import ir.mimlang.jmim.lang.std.StdContext
+import ir.mimlang.jmim.lang.std.ValueVariable
 import ir.mimlang.jmim.util.color
 import ir.mimlang.jmim.util.ext.line
 import ir.mimlang.jmim.util.ext.lines
@@ -28,21 +29,26 @@ fun main(args: Array<String>) {
 	
 	val code =
 		"""
-			var age = integer(stdstream("how old are you? "));
+			var count = int(stdstream("How many times do you want to print 'print'? "));
 			
-			if ((age > 0) && (age <= 18)) {
-				stdstream = "you're a teenager";
-			} elif (age > 18) {
-				stdstream = "you're a mature person";
-			} else {
-				stdstream = "hmm idk who are you";
+			stdstream.end = '
+			';
+			
+			repeat count {
+				stdstream = 'print';
+			}
+			
+			stdstream = "--------------";
+			
+			repeat count as i {
+				stdstream = 'print' + i;
 			}
 		""".trimIndent()
 	
-	try {
+	try { // todo make better error reporting
 		val tokens = Lexer(code).lex()
 		val nodes = Parser(tokens).parse()
-		val context = StdContext("<readline>")
+		val context = StdContext("<code>")
 		val interpreter = Interpreter(context)
 		nodes.forEach(interpreter::interpret)
 	} catch (e: LexerException) {
@@ -55,7 +61,8 @@ fun main(args: Array<String>) {
 			""".trimIndent()
 		)
 	} catch (e: ParserException) {
-		println("${color.red}syntax error: couldn't parse statement at ${e.range}${color.normal}")
+		val errMsg = e.message ?: "couldn't parse statement"
+		println("${color.red}syntax error: $errMsg at ${e.range}${color.normal}")
 		println(code lines e.range.start.line..e.range.end.line)
 		println("------------------------------------------------------")
 		println("stacktrace:")

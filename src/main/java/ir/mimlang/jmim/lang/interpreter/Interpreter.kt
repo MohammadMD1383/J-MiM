@@ -4,6 +4,7 @@ import ir.mimlang.jmim.lang.ctx.Context
 import ir.mimlang.jmim.lang.node.*
 import ir.mimlang.jmim.lang.std.FunctionVariable
 import ir.mimlang.jmim.lang.std.ValueVariable
+import ir.mimlang.jmim.lang.util.ext.repeat
 import ir.mimlang.jmim.lang.util.ext.then
 import kotlin.math.pow
 
@@ -13,7 +14,7 @@ class Interpreter(private var context: Context) {
 			is StatementNode -> return interpret(node.node)
 			is ParenthesizedOperationNode -> return interpret(node.node)
 			
-			is StringNode -> return node.string
+			is StringNode -> return node.string // todo: template strings
 			is NumberNode -> return node.value
 			
 			is IdentifierNode -> return context.findVariable(node.name)?.getValue()
@@ -61,30 +62,61 @@ class Interpreter(private var context: Context) {
 			}
 			
 			is BinaryOperationNode -> {
+				val leftNode: Node
+				val rightNode: Node
+				
+				if (node.rhs is BinaryOperationNode && node.operator.precedence >= node.rhs.operator.precedence) {
+					leftNode = node.lhs
+					rightNode = node.rhs.lhs
+					
+					// 2 * (4 + 6) will change to:
+					// (2 * 4) + 6
+					val range = leftNode.range.start..rightNode.range.end
+					return interpret(
+						BinaryOperationNode(
+							ParenthesizedOperationNode(
+								BinaryOperationNode(
+									leftNode,
+									node.operator,
+									rightNode,
+									range
+								),
+								range
+							),
+							node.rhs.operator,
+							node.rhs.rhs,
+							node.range
+						)
+					)
+				} else {
+					leftNode = node.lhs
+					rightNode = node.rhs
+				}
+				
 				when (node.operator) {
 					"=" -> {
-						when (node.lhs) {
+						when (leftNode) {
 							is IdentifierNode -> {
-								val variable = context.findVariable(node.lhs.name)
-									?: throw InterpreterException("no variable named ${node.lhs.name}") at node.lhs.range
-								val value = interpret(node.rhs)
+								val variable = context.findVariable(leftNode.name)
+									?: throw InterpreterException("no variable named ${leftNode.name}") at leftNode.range
+								val value = interpret(rightNode)
 								return value.also { variable.setValue(it) }
 							}
 							
 							is MemberAccessNode -> {
-								val variable = context.findVariable(node.lhs.name)
-									?: throw InterpreterException("no variable named ${node.lhs.name}") at node.lhs.range
-								val value = interpret(node.rhs)
-								return value.also { variable.setProperty(node.lhs.member, it) }
+								val variable = context.findVariable(leftNode.name)
+									?: throw InterpreterException("no variable named ${leftNode.name}") at leftNode.range
+								val value = interpret(rightNode)
+								return value.also { variable.setProperty(leftNode.member, it) }
 							}
 							
-							else -> throw InterpreterException("Left hand side in an assignment must be an identifier or member access") at node.lhs.range
+							else -> throw InterpreterException("Left hand side in an assignment must be an identifier or member access") at leftNode.range
 						}
 					}
 					
 					"+" -> {
-						val left = interpret(node.lhs)
-						val right = interpret(node.rhs)
+						val left = interpret(leftNode)
+						val right = interpret(rightNode)
 						
 						return when {
 							left is String -> left + right
@@ -101,8 +133,8 @@ class Interpreter(private var context: Context) {
 					}
 					
 					"-" -> {
-						val left = interpret(node.lhs)
-						val right = interpret(node.rhs)
+						val left = interpret(leftNode)
+						val right = interpret(rightNode)
 						
 						return when {
 							left is Long && right is Long -> left - right
@@ -115,8 +147,8 @@ class Interpreter(private var context: Context) {
 					}
 					
 					"*" -> {
-						val left = interpret(node.lhs)
-						val right = interpret(node.rhs)
+						val left = interpret(leftNode)
+						val right = interpret(rightNode)
 						
 						return when {
 							left is Long && right is String -> right.repeat(left.toInt())
@@ -132,8 +164,8 @@ class Interpreter(private var context: Context) {
 					}
 					
 					"/" -> {
-						val left = interpret(node.lhs)
-						val right = interpret(node.rhs)
+						val left = interpret(leftNode)
+						val right = interpret(rightNode)
 						
 						return when {
 							left is Long && right is Long -> left / right
@@ -146,8 +178,8 @@ class Interpreter(private var context: Context) {
 					}
 					
 					"^" -> {
-						val left = interpret(node.lhs)
-						val right = interpret(node.rhs)
+						val left = interpret(leftNode)
+						val right = interpret(rightNode)
 						
 						return when {
 							left is Long && right is Long -> left.toDouble().pow(right.toDouble())
@@ -160,8 +192,8 @@ class Interpreter(private var context: Context) {
 					}
 					
 					"<" -> {
-						val left = interpret(node.lhs)
-						val right =  interpret(node.rhs)
+						val left = interpret(leftNode)
+						val right = interpret(rightNode)
 						
 						return when {
 							left is Long && right is Long -> left < right
@@ -174,8 +206,8 @@ class Interpreter(private var context: Context) {
 					}
 					
 					">" -> {
-						val left = interpret(node.lhs)
-						val right =  interpret(node.rhs)
+						val left = interpret(leftNode)
+						val right = interpret(rightNode)
 						
 						return when {
 							left is Long && right is Long -> left > right
@@ -188,8 +220,8 @@ class Interpreter(private var context: Context) {
 					}
 					
 					"<=" -> {
-						val left = interpret(node.lhs)
-						val right =  interpret(node.rhs)
+						val left = interpret(leftNode)
+						val right = interpret(rightNode)
 						
 						return when {
 							left is Long && right is Long -> left <= right
@@ -202,8 +234,8 @@ class Interpreter(private var context: Context) {
 					}
 					
 					">=" -> {
-						val left = interpret(node.lhs)
-						val right =  interpret(node.rhs)
+						val left = interpret(leftNode)
+						val right = interpret(rightNode)
 						
 						return when {
 							left is Long && right is Long -> left >= right
@@ -216,22 +248,31 @@ class Interpreter(private var context: Context) {
 					}
 					
 					"||" -> {
-						val left = interpret(node.lhs)
-						val right =  interpret(node.rhs)
+						(interpret(leftNode) as? Boolean)?.then {
+							return true
+						} ?: throw InterpreterException("operands of || operator must be boolean") at leftNode.range
 						
-						return if (left is Boolean && right is Boolean) left || right
-						else throw InterpreterException("Unsupported operands for || operator") at node.range
+						(interpret(rightNode) as? Boolean)?.then {
+							return true
+						} ?: throw InterpreterException("operands of || operator must be boolean") at rightNode.range
+						
+						return false
 					}
 					
 					"&&" -> {
-						val left = interpret(node.lhs)
-						val right =  interpret(node.rhs)
+						(interpret(leftNode) as? Boolean)?.then {
+							(interpret(rightNode) as? Boolean)?.then {
+								return true
+							} ?: throw InterpreterException("operands of && operator must be boolean") at rightNode.range
+						} ?: throw InterpreterException("operands of && operator must be boolean") at leftNode.range
 						
-						return if (left is Boolean && right is Boolean) left && right
-						else throw InterpreterException("Unsupported operands for && operator") at node.range
+						return false
 					}
 					
-					else -> throw InterpreterException("Unsupported Operator") at node.lhs.range.end..node.rhs.range.start
+					"==" -> return interpret(leftNode) == interpret(rightNode)
+					"!=" -> return interpret(leftNode) != interpret(rightNode)
+					
+					else -> throw InterpreterException("Unsupported Operator") at leftNode.range.end..rightNode.range.start
 				}
 			}
 			
@@ -301,6 +342,25 @@ class Interpreter(private var context: Context) {
 				}
 				
 				popContext()
+				return null
+			}
+			
+			is RepeatLoopStatement -> {
+				val count = (interpret(node.times) as? Long)
+					?: throw InterpreterException("repeat count must be integer value") at node.times.range
+				
+				count repeat { i ->
+					pushContext("[repeat:$i]")
+					
+					node.varName?.let {
+						context.addVariable(ValueVariable(it, i))
+					}
+					
+					node.body.forEach(this::interpret)
+					
+					popContext()
+				}
+				
 				return null
 			}
 			

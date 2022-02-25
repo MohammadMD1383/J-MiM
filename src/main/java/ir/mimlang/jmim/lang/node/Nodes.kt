@@ -1,6 +1,7 @@
 package ir.mimlang.jmim.lang.node
 
 import ir.mimlang.jmim.lang.util.TextRange
+import ir.mimlang.jmim.lang.util.ext.prepend
 
 interface Node {
 	val range: TextRange
@@ -65,7 +66,7 @@ data class VariableDeclarationNode(
 	val value: Node?,
 	override val range: TextRange
 ) : Node {
-	override fun toString(): String = "var $name${value?.let { " = $value" } ?: ""};"
+	override fun toString(): String = "var $name${value?.let { " = $value" } ?: ""};" //todo rewrite
 }
 
 data class FunctionDeclarationNode(
@@ -78,7 +79,7 @@ data class FunctionDeclarationNode(
 		params.run {
 			if (isNotEmpty()) "(${joinToString()})" else ""
 		}
-	} {\n${body.joinToString("\n").prependIndent("\t")}\n}"
+	} {\n${body.joinToString("\n").prependIndent("\t")}\n}" // todo rewrite...
 }
 
 data class FunctionCallNode(
@@ -102,4 +103,26 @@ data class IfStatementNode(
 	val elifBranches: List<Pair<Node, List<Node>>>?,
 	val elseBranch: List<Node>?,
 	override val range: TextRange
-) : Node
+) : Node {
+	override fun toString(): String {
+		val tmpIf = "if (${ifBranch.first}) {\n${ifBranch.second.joinToString("\n").prependIndent("\t")}\n}"
+		val tmpElif = elifBranches?.joinToString(" ") {
+			"elif (${it.first}) {\n${it.second.joinToString("\n").prependIndent("\t")}\n}"
+		} ?: ""
+		val tmpElse = elseBranch?.let { "else {\n${it.joinToString("\n").prependIndent("\t")}\n}" } ?: ""
+		
+		return "$tmpIf $tmpElif $tmpElse"
+	}
+}
+
+data class RepeatLoopStatement(
+	val times: Node,
+	val varName: String?,
+	val body: List<Node>,
+	override val range: TextRange
+) : Node {
+	override fun toString(): String {
+		val tmpVarName = varName?.prepend(" as ") ?: ""
+		return "repeat $times$tmpVarName {\n${body.joinToString("\n").prependIndent("\t")}\n}"
+	}
+}

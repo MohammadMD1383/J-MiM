@@ -7,7 +7,8 @@ class StdContext(name: String) : Context(null, name) {
 		variables.add(StdStream)
 		variables.add(True)
 		variables.add(False)
-		variables.add(Integer)
+		variables.add(IntValueOf)
+		variables.add(StringValueOf)
 		variables.add(Random)
 	}
 }

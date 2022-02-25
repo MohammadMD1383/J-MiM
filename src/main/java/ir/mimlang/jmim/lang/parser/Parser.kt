@@ -37,8 +37,7 @@ class Parser(tokens: List<Token>) {
 	}
 	
 	private fun removeSaved() {
-		if (tokenIndex > processedRange.second)
-			processedRange = processedRange.copy(second = tokenIndex)
+		processedRange = 0 to 0
 		
 		savedIndexes.removeLast()
 	}
@@ -54,11 +53,36 @@ class Parser(tokens: List<Token>) {
 	}
 	
 	private fun expectRoot() = (
-		expectIfStatement()
+		expectLoopStatement()
+			?: expectIfStatement()
 			?: expectFunctionDeclaration()
 			?: expectVariableDeclaration()
 			?: expectStatement()
 		)
+	
+	private fun expectLoopStatement(): Node? = expectRepeatLoop()
+	
+	private fun expectRepeatLoop(): RepeatLoopStatement? {
+		save()
+		
+		val repeatKw = expectKeyword("repeat") ?: run { restore(); return null }
+		val times = expectMemberAccess()
+			?: expectIdentifier()
+			?: expectNumber()
+			?: run { restore(); return null }
+		val assignedTo = expectKeyword("as")?.let {
+			expectIdentifier() ?: throw ParserException("expected identifier after 'as'") at it.range
+		}
+		
+		expectLeftBracket() ?: run { restore(); return null }
+		val body = mutableListOf<Node>().apply {
+			while (true) add(expectRoot() ?: break)
+		}
+		val repeatEndBracket = expectRightBracket() ?: run { restore(); return null }
+		
+		removeSaved()
+		return RepeatLoopStatement(times, assignedTo?.name, body, repeatKw.range.start..repeatEndBracket.range.end)
+	}
 	
 	private fun expectIfStatement(): IfStatementNode? {
 		save()
@@ -234,7 +258,7 @@ class Parser(tokens: List<Token>) {
 		return StatementNode(node, node.range.start..eos.range.end)
 	}
 	
-	private fun expectMemberAccess(): MemberAccessNode? {
+	private fun expectMemberAccess(): MemberAccessNode? { // todo member invoke
 		save()
 		
 		val name = expectIdentifier() ?: run { restore(); return null }
