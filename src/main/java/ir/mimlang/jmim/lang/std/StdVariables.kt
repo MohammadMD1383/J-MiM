@@ -3,12 +3,15 @@ package ir.mimlang.jmim.lang.std
 import ir.mimlang.jmim.lang.ctx.Context
 import ir.mimlang.jmim.lang.ctx.Variable
 import kotlin.random.Random.Default.nextLong
+import kotlin.system.exitProcess
 
 val StdStream = object : Variable {
 	override val name: String get() = "stdstream"
 	
 	private var end = ""
 	private var sep = " "
+	
+	override fun increment(returnBeforeJob: Boolean): Unit = println()
 	
 	override fun getValue(): String = readln()
 	override fun setValue(value: Any?) = print("$value$end")
@@ -47,6 +50,33 @@ val True = object : Variable {
 val False = object : Variable {
 	override val name: String get() = "false"
 	override fun getValue(): Boolean = false
+}
+
+val Exit = object : Variable {
+	override val name: String get() = "exit"
+	
+	override fun getValue(): Nothing = exitProcess(0)
+	override fun invoke(context: Context): Any? {
+		val params = context.getParams()
+			?: throw Exception("params not found")
+		
+		if (params.size != 1)
+			throw Exception("exit only accepts one integer parameter")
+		
+		exitProcess((params[0] as Long).toInt())
+	}
+}
+
+val Unpack = object : Variable {
+	override val name: String get() = "unpack"
+	
+	override fun invoke(context: Context): Any? {
+		val params = context.getParams()
+			?: throw Exception("params not found")
+		
+		context.parent!!.unpackParams(params.map { it as String })
+		return null
+	}
 }
 
 val BreakStatement = object : Variable {

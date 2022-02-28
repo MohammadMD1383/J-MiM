@@ -30,7 +30,14 @@ fun main(args: Array<String>) {
 	
 	val code =
 		"""
-		""".trimIndent()
+			val a = list { run { 1 + 0; } 2; 3; };
+			stdstream = a.size;
+			stdstream++;
+			stdstream = a;
+		""".trimIndent() // todo add support for map
+	
+	// todo add support for list.get()
+	// todo add support for map.get()
 	
 	try { // todo make better error reporting
 		val tokens = Lexer(code).lex()

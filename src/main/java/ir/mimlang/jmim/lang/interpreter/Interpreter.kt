@@ -16,8 +16,12 @@ class Interpreter(private var context: Context) {
 			is StringNode -> return node.string // todo: template strings
 			is NumberNode -> return node.value
 			
-			is IdentifierNode -> return context.findVariable(node.name)?.getValue()
-				?: throw InterpreterException("no variable named ${node.name}") at node.range
+			is IdentifierNode -> {
+				val variable = context.findVariable(node.name)
+					?: throw InterpreterException("no variable named ${node.name}") at node.range
+				
+				return variable.getValue()
+			}
 			
 			is MemberAccessNode -> {
 				val variable = context.findVariable(node.name)
@@ -34,7 +38,7 @@ class Interpreter(private var context: Context) {
 			
 			is VariableDeclarationNode -> {
 				val value = node.value?.let(::interpret)
-				val variable = ValueVariable(node.name, value)
+				val variable = ValueVariable(node.name, value, node.isConst)
 				
 				if (context.addVariable(variable)) return value
 				else throw InterpreterException("variable ${node.name} already exists") at node.range
@@ -291,11 +295,14 @@ class Interpreter(private var context: Context) {
 			}
 			
 			is FunctionCallNode -> {
-				return context.findVariable(node.name)?.invoke(
+				val variable = context.findVariable(node.name)
+					?: throw InterpreterException("No function named ${node.name}") at node.range
+				
+				return variable.invoke(
 					Context(context, node.name).apply {
 						addVariable(ValueVariable("__params__", node.params.map(this@Interpreter::interpret), true))
 					}
-				) ?: throw InterpreterException("No function named ${node.name}") at node.range
+				)
 			}
 			
 			is IfStatementNode -> {
@@ -347,7 +354,7 @@ class Interpreter(private var context: Context) {
 				return null
 			}
 			
-			is RepeatLoopStatement -> {
+			is RepeatLoopStatementNode -> {
 				val count = (interpret(node.times) as? Long)
 					?: throw InterpreterException("repeat count must be integer value") at node.times.range
 				
@@ -369,7 +376,7 @@ class Interpreter(private var context: Context) {
 				return null
 			}
 			
-			is WhileLoopStatement -> {
+			is WhileLoopStatementNode -> {
 				breakable {
 					var loop = true
 					while (loop) {
@@ -389,7 +396,39 @@ class Interpreter(private var context: Context) {
 				return null
 			}
 			
-			else -> throw Exception("Unsupported node at ${node.range}")
+			is NamedBlockNode -> {
+				when (node.name) {
+					"repeat" -> {
+						breakable {
+							while (true) {
+								continuable {
+									pushContext("infinite repeat block")
+									node.body.interpret()
+									popContext()
+								} onContinue { popContext() }
+							}
+						} onBreak { popContext() }
+						
+						return null
+					}
+					
+					"run" -> {
+						pushContext("run block")
+						val result = node.body.interpretAndReturnLast()
+						popContext()
+						
+						return result
+					}
+					
+					"list" -> return node.body.map(this::interpret)
+					
+					"lambda" -> return FunctionVariable("lambda${node.range}", listOf(), node.body)
+					
+					else -> throw InterpreterException("Named block with name '${node.name}' is not known") at node.range
+				}
+			}
+			
+			else -> throw InterpreterException("Unsupported node") at node.range
 		}
 	}
 	
@@ -403,4 +442,14 @@ class Interpreter(private var context: Context) {
 	
 	@Suppress("NOTHING_TO_INLINE")
 	private inline fun List<Node>.interpret() = forEach(this@Interpreter::interpret)
+	
+	private fun List<Node>.interpretAndReturnLast(): Any? { // todo make use of this all over interpreter
+		isEmpty() then { return null }
+		
+		toMutableList().run {
+			val lastNode = removeLast()
+			interpret()
+			return interpret(lastNode)
+		}
+	}
 }

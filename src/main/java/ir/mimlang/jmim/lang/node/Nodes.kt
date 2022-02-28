@@ -64,6 +64,7 @@ data class StatementNode(
 data class VariableDeclarationNode(
 	val name: String,
 	val value: Node?,
+	val isConst: Boolean,
 	override val range: TextRange
 ) : Node {
 	override fun toString(): String = "var $name${value?.let { " = $value" } ?: ""};" //todo rewrite
@@ -119,7 +120,7 @@ data class IfStatementNode(
 	}
 }
 
-data class RepeatLoopStatement(
+data class RepeatLoopStatementNode(
 	val times: Node,
 	val varName: String?,
 	val body: List<Node>,
@@ -131,10 +132,18 @@ data class RepeatLoopStatement(
 	}
 }
 
-data class WhileLoopStatement(
+data class WhileLoopStatementNode(
 	val condition: Node,
 	val body: List<Node>,
 	override val range: TextRange
 ) : Node {
 	override fun toString(): String = "while ($condition) {\n${body.joinToString("\n").prependIndent("\t")}\n}"
+}
+
+data class NamedBlockNode(
+	val name: String,
+	val body: List<Node>,
+	override val range: TextRange
+) : Node {
+	override fun toString(): String = "$name {\n${body.joinToString("\n").prependIndent("\t")}\n}"
 }

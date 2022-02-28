@@ -30,4 +30,6 @@ open class Context(
 		if (names.size != params.size) throw IllegalArgumentException("__params__ size differs from arguments size")
 		names.forEachIndexed { i, name -> addVariable(ValueVariable(name, params[i])) }
 	}
+	
+	override fun toString(): String = name
 }

@@ -8,8 +8,8 @@ import ir.mimlang.jmim.lang.util.ext.then
 
 class FunctionVariable(
 	override val name: String,
-	val params: List<String>,
-	val body: List<Node>
+	private val params: List<String>,
+	private val body: List<Node>
 ) : Variable {
 	override fun getValue(): FunctionVariable = this
 	
@@ -21,6 +21,7 @@ class FunctionVariable(
 		for (i in 0 until body.lastIndex) {
 			interpreter.interpret(body[i])
 		}
+		
 		return interpreter.interpret(lastNode)
 	}
 }

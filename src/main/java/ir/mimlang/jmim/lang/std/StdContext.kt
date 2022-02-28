@@ -8,6 +8,8 @@ class StdContext(name: String) : Context(null, name) {
 		variables.add(Null)
 		variables.add(True)
 		variables.add(False)
+		variables.add(Exit)
+		variables.add(Unpack)
 		variables.add(BreakStatement)
 		variables.add(ContinueStatement)
 		variables.add(IntValueOf)
