@@ -4,8 +4,7 @@ import ir.mimlang.jmim.lang.ctx.Context
 import ir.mimlang.jmim.lang.node.*
 import ir.mimlang.jmim.lang.std.FunctionVariable
 import ir.mimlang.jmim.lang.std.ValueVariable
-import ir.mimlang.jmim.lang.util.ext.repeat
-import ir.mimlang.jmim.lang.util.ext.then
+import ir.mimlang.jmim.lang.util.ext.*
 import kotlin.math.pow
 
 class Interpreter(private var context: Context) {
@@ -20,8 +19,18 @@ class Interpreter(private var context: Context) {
 			is IdentifierNode -> return context.findVariable(node.name)?.getValue()
 				?: throw InterpreterException("no variable named ${node.name}") at node.range
 			
-			is MemberAccessNode -> return context.findVariable(node.name)?.getProperty(node.member)
-				?: throw InterpreterException("No variable named ${node.name}") at node.range
+			is MemberAccessNode -> {
+				val variable = context.findVariable(node.name)
+					?: throw InterpreterException("no variable named ${node.name}") at node.range
+				
+				return if (node.params != null) {
+					variable.invokeMember(
+						Context(context, "${node.name}${node.member}").apply {
+							addVariable(ValueVariable("__params__", node.params.map(this@Interpreter::interpret), true))
+						}
+					)
+				} else variable.getProperty(node.member)
+			}
 			
 			is VariableDeclarationNode -> {
 				val value = node.value?.let(::interpret)
@@ -71,17 +80,13 @@ class Interpreter(private var context: Context) {
 					
 					// 2 * (4 + 6) will change to:
 					// (2 * 4) + 6
-					val range = leftNode.range.start..rightNode.range.end
 					return interpret(
 						BinaryOperationNode(
-							ParenthesizedOperationNode(
-								BinaryOperationNode(
-									leftNode,
-									node.operator,
-									rightNode,
-									range
-								),
-								range
+							BinaryOperationNode(
+								leftNode,
+								node.operator,
+								rightNode,
+								leftNode.range.start..rightNode.range.end
 							),
 							node.rhs.operator,
 							node.rhs.rhs,
@@ -106,6 +111,9 @@ class Interpreter(private var context: Context) {
 							is MemberAccessNode -> {
 								val variable = context.findVariable(leftNode.name)
 									?: throw InterpreterException("no variable named ${leftNode.name}") at leftNode.range
+								
+								leftNode.params then { throw InterpreterException("cannot assign to member invocation") at node.range }
+								
 								val value = interpret(rightNode)
 								return value.also { variable.setProperty(leftNode.member, it) }
 							}
@@ -285,63 +293,57 @@ class Interpreter(private var context: Context) {
 			is FunctionCallNode -> {
 				return context.findVariable(node.name)?.invoke(
 					Context(context, node.name).apply {
-						addVariable(ValueVariable("__params__", node.params.map(this@Interpreter::interpret)))
+						addVariable(ValueVariable("__params__", node.params.map(this@Interpreter::interpret), true))
 					}
 				) ?: throw InterpreterException("No function named ${node.name}") at node.range
 			}
 			
 			is IfStatementNode -> {
-				pushContext("if statement")
-				
 				(interpret(node.ifBranch.first) as? Boolean)?.then {
-					if (node.ifBranch.second.isEmpty()) {
-						popContext()
-						return null
-					}
+					node.ifBranch.second.isEmpty() then { return null }
 					
-					node.ifBranch.second.toMutableList().apply {
-						val lastNode = removeLast()
-						forEach(this@Interpreter::interpret)
-						val result = interpret(lastNode)
-						popContext()
-						return result
-					}
-				} ?: run {
-					popContext()
-					throw InterpreterException("if condition must be boolean") at node.ifBranch.first.range
-				}
-				
-				node.elifBranches?.forEach {
-					(interpret(it.first) as? Boolean)?.then {
-						if (it.second.isEmpty()) {
-							popContext()
-							return null
-						}
-						
-						it.second.toMutableList().apply {
+					breakable {
+						pushContext("if statement")
+						node.ifBranch.second.toMutableList().apply {
 							val lastNode = removeLast()
-							forEach(this@Interpreter::interpret)
+							interpret()
 							val result = interpret(lastNode)
 							popContext()
 							return result
 						}
-					} ?: run {
-						popContext()
-						throw InterpreterException("elif condition must be boolean") at it.first.range
-					}
+					} onBreak { popContext() }
+				} ?: throw InterpreterException("if condition must be boolean") at node.ifBranch.first.range
+				
+				node.elifBranches?.forEach {
+					(interpret(it.first) as? Boolean)?.then {
+						it.second.isEmpty() then { return null }
+						
+						breakable {
+							pushContext("elif statement")
+							it.second.toMutableList().apply {
+								val lastNode = removeLast()
+								interpret()
+								val result = interpret(lastNode)
+								popContext()
+								return result
+							}
+						} onBreak { popContext() }
+					} ?: throw InterpreterException("elif condition must be boolean") at it.first.range
 				}
 				
 				node.elseBranch?.isNotEmpty()?.then {
-					node.elseBranch.toMutableList().apply {
-						val lastNode = removeLast()
-						forEach(this@Interpreter::interpret)
-						val result = interpret(lastNode)
-						popContext()
-						return result
-					}
+					breakable {
+						pushContext("else statement")
+						node.elseBranch.toMutableList().apply {
+							val lastNode = removeLast()
+							interpret()
+							val result = interpret(lastNode)
+							popContext()
+							return result
+						}
+					} onBreak { popContext() }
 				}
 				
-				popContext()
 				return null
 			}
 			
@@ -349,17 +351,40 @@ class Interpreter(private var context: Context) {
 				val count = (interpret(node.times) as? Long)
 					?: throw InterpreterException("repeat count must be integer value") at node.times.range
 				
-				count repeat { i ->
-					pushContext("[repeat:$i]")
-					
-					node.varName?.let {
-						context.addVariable(ValueVariable(it, i))
+				breakable {
+					repeat(count) { i ->
+						continuable {
+							pushContext("[repeat:$i]")
+							
+							node.varName?.let {
+								context.addVariable(ValueVariable(it, i, true))
+							}
+							node.body.interpret()
+							
+							popContext()
+						} onContinue { popContext() }
 					}
-					
-					node.body.forEach(this::interpret)
-					
-					popContext()
-				}
+				} onBreak { popContext() }
+				
+				return null
+			}
+			
+			is WhileLoopStatement -> {
+				breakable {
+					var loop = true
+					while (loop) {
+						continuable {
+							val cond = interpret(node.condition) as? Boolean
+								?: throw InterpreterException("condition of while loop must be boolean value") at node.condition.range
+							
+							if (cond) {
+								pushContext("while loop")
+								node.body.interpret()
+								popContext()
+							} else loop = false
+						} onContinue { popContext() }
+					}
+				} onBreak { popContext() }
 				
 				return null
 			}
@@ -375,4 +400,7 @@ class Interpreter(private var context: Context) {
 	private fun popContext() {
 		context.parent?.let { context = it }
 	}
+	
+	@Suppress("NOTHING_TO_INLINE")
+	private inline fun List<Node>.interpret() = forEach(this@Interpreter::interpret)
 }

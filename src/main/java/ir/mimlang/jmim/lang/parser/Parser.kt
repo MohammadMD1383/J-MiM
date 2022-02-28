@@ -2,7 +2,6 @@ package ir.mimlang.jmim.lang.parser
 
 import ir.mimlang.jmim.lang.node.*
 import ir.mimlang.jmim.lang.token.*
-import ir.mimlang.jmim.lang.util.Position
 import ir.mimlang.jmim.lang.util.TextRange
 
 class Parser(tokens: List<Token>) {
@@ -52,15 +51,30 @@ class Parser(tokens: List<Token>) {
 		}
 	}
 	
-	private fun expectRoot() = (
-		expectLoopStatement()
-			?: expectIfStatement()
-			?: expectFunctionDeclaration()
-			?: expectVariableDeclaration()
-			?: expectStatement()
-		)
+	private fun expectRoot() = expectLoopStatement()
+		?: expectIfStatement()
+		?: expectFunctionDeclaration()
+		?: expectVariableDeclaration()
+		?: expectStatement()
+	
 	
 	private fun expectLoopStatement(): Node? = expectRepeatLoop()
+		?: expectWhileLoop()
+	
+	private fun expectWhileLoop(): WhileLoopStatement? {
+		save()
+		
+		val whileKw = expectKeyword("while") ?: run { restore(); return null }
+		val condition = expectParenthesizedOperation()?.node ?: run { restore(); return null }
+		expectLeftBracket() ?: run { restore(); return null }
+		val body = mutableListOf<Node>().apply {
+			while (true) add(expectRoot() ?: break)
+		}
+		val whileEndBracket = expectRightBracket() ?: run { restore(); return null }
+		
+		removeSaved()
+		return WhileLoopStatement(condition, body, whileKw.range.start..whileEndBracket.range.end)
+	}
 	
 	private fun expectRepeatLoop(): RepeatLoopStatement? {
 		save()
@@ -88,16 +102,17 @@ class Parser(tokens: List<Token>) {
 		save()
 		
 		/* if (...) {...} */
-		/*val ifKw =*/ expectKeyword("if") ?: run { restore(); return null }
+		val ifKw = expectKeyword("if") ?: run { restore(); return null }
 		val ifCond = expectParenthesizedOperation()?.node ?: run { restore(); return null }
-		expectLeftBracket() ?: run { restore(); return null }
+		expectLeftBracket() ?: run { restore(); return null } // todo make another method to expect {...body...}
 		val ifBody = mutableListOf<Node>().apply {
 			while (true) add(expectRoot() ?: break)
 		}
-		/*val ifEndBracket =*/ expectRightBracket() ?: run { restore(); return null }
+		val ifRbr = expectRightBracket() ?: run { restore(); return null }
 		
 		/* elif (...) {...} */
 		var elifStatements: MutableList<Pair<Node, List<Node>>>? = mutableListOf()
+		var elifRbr: Token? = null
 		while (true) {
 			save()
 			
@@ -121,7 +136,10 @@ class Parser(tokens: List<Token>) {
 				while (true) add(expectRoot() ?: break)
 			}
 			
-			if (expectRightBracket() == null) {
+			val prevElifRbr = elifRbr
+			elifRbr = expectRightBracket()
+			if (elifRbr == null) {
+				elifRbr = prevElifRbr
 				restore()
 				break
 			}
@@ -133,6 +151,7 @@ class Parser(tokens: List<Token>) {
 		
 		/* else {...} */
 		var elseStatements: MutableList<Node>? = mutableListOf()
+		var elseRbr: Token? = null
 		val elseCaught = run {
 			save()
 			
@@ -148,7 +167,8 @@ class Parser(tokens: List<Token>) {
 			
 			while (true) elseStatements!!.add(expectRoot() ?: break)
 			
-			if (expectRightBracket() == null) {
+			elseRbr = expectRightBracket()
+			if (elseRbr == null) {
 				restore()
 				return@run false
 			}
@@ -159,9 +179,14 @@ class Parser(tokens: List<Token>) {
 		if (!elseCaught) elseStatements = null
 		
 		/* returning if statement */
+		val endRange = when {
+			elseCaught -> elseRbr!!.range.end
+			elifRbr != null -> elifRbr.range.end
+			else -> ifRbr.range.end
+		}
+		
 		removeSaved()
-		return IfStatementNode(ifCond to ifBody, elifStatements, elseStatements, TextRange(Position(0, 0), Position(0, 0)))
-		//fixme: range
+		return IfStatementNode(ifCond to ifBody, elifStatements, elseStatements, ifKw.range.start..endRange)
 	}
 	
 	private fun expectFunctionDeclaration(): FunctionDeclarationNode? {
@@ -196,26 +221,10 @@ class Parser(tokens: List<Token>) {
 		save()
 		
 		val name = expectIdentifier() ?: run { restore(); return null }
-		
-		expectLeftParenthesis() ?: run { restore(); return null }
-		val params = mutableListOf<Node>().apply {
-			while (true) {
-				add(
-					expectUnaryOperation()
-						?: expectBinaryOperation()
-						?: expectFunctionCall()
-						?: expectString()
-						?: expectIdentifier()
-						?: expectNumber()
-						?: break
-				)
-				expectSeparator() ?: break
-			}
-		}
-		val rpr = expectRightParenthesis() ?: run { restore(); return null }
+		val params = expectParenthesizedParams() ?: run { restore(); return null }
 		
 		removeSaved()
-		return FunctionCallNode(name.name, params, name.range.start..rpr.range.end)
+		return FunctionCallNode(name.name, params.first, name.range.start..params.second.end)
 	}
 	
 	private fun expectVariableDeclaration(): VariableDeclarationNode? {
@@ -258,15 +267,18 @@ class Parser(tokens: List<Token>) {
 		return StatementNode(node, node.range.start..eos.range.end)
 	}
 	
-	private fun expectMemberAccess(): MemberAccessNode? { // todo member invoke
+	private fun expectMemberAccess(): MemberAccessNode? {
 		save()
 		
 		val name = expectIdentifier() ?: run { restore(); return null }
 		expectPropertyAccessor() ?: run { restore(); return null }
 		val member = expectIdentifier() ?: run { restore(); return null }
+		val params = expectParenthesizedParams()
+		
+		val endPos = params?.second?.end ?: member.range.end
 		
 		removeSaved()
-		return MemberAccessNode(name.name, member.name, name.range.start..member.range.end)
+		return MemberAccessNode(name.name, member.name, params?.first, name.range.start..endPos)
 	}
 	
 	private fun expectUnaryOperation(): UnaryOperationNode? {
@@ -306,8 +318,8 @@ class Parser(tokens: List<Token>) {
 		val op = expectBinaryOperator()
 			?: run { restore(); return null }
 		
-		val rhs = expectUnaryOperation()
-			?: expectBinaryOperation()
+		val rhs = expectBinaryOperation()
+			?: expectUnaryOperation()
 			?: expectFunctionCall()
 			?: expectParenthesizedOperation()
 			?: expectMemberAccess()
@@ -326,10 +338,14 @@ class Parser(tokens: List<Token>) {
 		val lpr = expectLeftParenthesis()
 			?: run { restore(); return null }
 		
-		val node = expectUnaryOperation()
-			?: expectBinaryOperation()
+		val node = expectBinaryOperation()
+			?: expectUnaryOperation()
+			?: expectFunctionCall()
 			?: expectParenthesizedOperation()
+			?: expectMemberAccess()
 			?: expectIdentifier()
+			?: expectNumber()
+			?: expectString()
 			?: run { restore(); return null }
 		
 		val rpr = expectRightParenthesis()
@@ -337,6 +353,33 @@ class Parser(tokens: List<Token>) {
 		
 		removeSaved()
 		return ParenthesizedOperationNode(node, lpr.range.start..rpr.range.end)
+	}
+	
+	private fun expectParenthesizedParams(): Pair<List<Node>, TextRange>? {
+		save()
+		
+		val lpr = expectLeftParenthesis() ?: run { restore(); return null }
+		val params = mutableListOf<Node>().apply {
+			while (true) {
+				add(
+					expectBinaryOperation()
+						?: expectUnaryOperation()
+						?: expectFunctionCall()
+						?: expectParenthesizedOperation()
+						?: expectString()
+						?: expectMemberAccess()
+						?: expectIdentifier()
+						?: expectNumber()
+						?: break
+				)
+				
+				expectSeparator() ?: break
+			}
+		}
+		val rpr = expectRightParenthesis() ?: run { restore(); return null }
+		
+		removeSaved()
+		return params to lpr.range.start..rpr.range.end
 	}
 	
 	private fun expectKeyword(kw: String): Token? =

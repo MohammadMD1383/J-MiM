@@ -6,8 +6,9 @@ import ir.mimlang.jmim.lang.lexer.Lexer
 import ir.mimlang.jmim.lang.lexer.LexerException
 import ir.mimlang.jmim.lang.parser.Parser
 import ir.mimlang.jmim.lang.parser.ParserException
+import ir.mimlang.jmim.lang.std.Break
+import ir.mimlang.jmim.lang.std.Continue
 import ir.mimlang.jmim.lang.std.StdContext
-import ir.mimlang.jmim.lang.std.ValueVariable
 import ir.mimlang.jmim.util.color
 import ir.mimlang.jmim.util.ext.line
 import ir.mimlang.jmim.util.ext.lines
@@ -29,20 +30,6 @@ fun main(args: Array<String>) {
 	
 	val code =
 		"""
-			var count = int(stdstream("How many times do you want to print 'print'? "));
-			
-			stdstream.end = '
-			';
-			
-			repeat count {
-				stdstream = 'print';
-			}
-			
-			stdstream = "--------------";
-			
-			repeat count as i {
-				stdstream = 'print' + i;
-			}
 		""".trimIndent()
 	
 	try { // todo make better error reporting

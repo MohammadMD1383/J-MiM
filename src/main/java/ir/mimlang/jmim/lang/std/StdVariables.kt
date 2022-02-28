@@ -34,6 +34,11 @@ val StdStream = object : Variable {
 	}
 }
 
+val Null = object : Variable {
+	override val name: String get() = "null"
+	override fun getValue(): Any? = null
+}
+
 val True = object : Variable {
 	override val name: String get() = "true"
 	override fun getValue(): Boolean = true
@@ -42,6 +47,36 @@ val True = object : Variable {
 val False = object : Variable {
 	override val name: String get() = "false"
 	override fun getValue(): Boolean = false
+}
+
+val BreakStatement = object : Variable {
+	override val name: String get() = "break"
+	
+	override fun getValue(): Nothing = throw Break(0)
+	override fun invoke(context: Context): Nothing {
+		val params = context.getParams()
+			?: throw Exception("params not found")
+		
+		if (params.size != 1)
+			throw Exception("break only accepts one integer parameter")
+		
+		throw Break(params[0] as Long)
+	}
+}
+
+val ContinueStatement = object : Variable {
+	override val name: String get() = "continue"
+	
+	override fun getValue(): Nothing = throw Continue(0)
+	override fun invoke(context: Context): Nothing {
+		val params = context.getParams()
+			?: throw Exception("params not found")
+		
+		if (params.size != 1)
+			throw Exception("continue only accepts one integer parameter")
+		
+		throw Continue(params[0] as Long)
+	}
 }
 
 val IntValueOf = object : Variable {

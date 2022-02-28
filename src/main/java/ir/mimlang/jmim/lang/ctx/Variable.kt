@@ -8,9 +8,6 @@ interface Variable {
 	fun increment(returnBeforeJob: Boolean): Any? = this.error("increment")
 	fun decrement(returnBeforeJob: Boolean): Any? = this.error("decrement")
 	
-	// fun logicNegate(): Variable
-	// fun bitwiseNegate(): Variable
-	
 	fun getValue(): Any? = this.error("getValue")
 	fun setValue(value: Any?): Unit = this.error("setValue")
 	
@@ -18,6 +15,7 @@ interface Variable {
 	fun setProperty(name: String, value: Any?): Unit = this.error("setProperty")
 	
 	fun invoke(context: Context): Any? = this.error("invoke")
+	fun invokeMember(context: Context): Any? = this.error("invokeMember")
 	
 	private fun error(method: String): Nothing = throw OperationNotSupportedException("$method is not supported on $name")
 }

@@ -93,9 +93,13 @@ data class FunctionCallNode(
 data class MemberAccessNode(
 	val name: String,
 	val member: String,
+	val params: List<Node>?,
 	override val range: TextRange
 ) : Node {
-	override fun toString(): String = "$name.$member"
+	override fun toString(): String {
+		val invocation = params?.let { "(${params.joinToString()})" } ?: ""
+		return "$name.$member$invocation"
+	}
 }
 
 data class IfStatementNode(
@@ -125,4 +129,12 @@ data class RepeatLoopStatement(
 		val tmpVarName = varName?.prepend(" as ") ?: ""
 		return "repeat $times$tmpVarName {\n${body.joinToString("\n").prependIndent("\t")}\n}"
 	}
+}
+
+data class WhileLoopStatement(
+	val condition: Node,
+	val body: List<Node>,
+	override val range: TextRange
+) : Node {
+	override fun toString(): String = "while ($condition) {\n${body.joinToString("\n").prependIndent("\t")}\n}"
 }
