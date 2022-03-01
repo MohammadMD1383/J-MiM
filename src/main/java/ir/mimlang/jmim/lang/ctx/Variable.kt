@@ -15,7 +15,7 @@ interface Variable {
 	fun setProperty(name: String, value: Any?): Unit = this.error("setProperty")
 	
 	fun invoke(context: Context): Any? = this.error("invoke")
-	fun invokeMember(context: Context): Any? = this.error("invokeMember")
+	fun invokeMember(name: String, context: Context): Any? = this.error("invokeMember")
 	
 	private fun error(method: String): Nothing = throw OperationNotSupportedException("$method is not supported on $name")
 }

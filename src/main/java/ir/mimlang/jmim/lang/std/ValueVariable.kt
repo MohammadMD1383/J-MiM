@@ -56,6 +56,25 @@ class ValueVariable(
 	}
 	
 	override fun invoke(context: Context): Any? = (value as? FunctionVariable)?.invoke(context) ?: super.invoke(context)
+	override fun invokeMember(name: String, context: Context): Any? {
+		return when (name) {
+			"invoke" -> invoke(context)
+			
+			"get" -> {
+				val getParam = context.getParams()!!.single() // todo make better
+				
+				when (value) {
+					is List<*> -> (value as List<*>)[(getParam as Long).toInt()]
+					is Map<*, *> -> (value as Map<*, *>)[getParam as String]
+					is String -> (value as String)[(getParam as Long).toInt()]
+					
+					else -> throw UnsupportedOperationException("property 'size' exists only for lists")
+				}
+			}
+			
+			else -> throw IllegalArgumentException("method $name doesn't exist on ${this.name}")
+		}
+	}
 	
 	private fun constThrow(): Nothing = throw UnsupportedOperationException("cannot change the value of constant $name")
 }

@@ -23,17 +23,34 @@ class Interpreter(private var context: Context) {
 				return variable.getValue()
 			}
 			
-			is MemberAccessNode -> {
-				val variable = context.findVariable(node.name)
+			is MemberAccessNode -> { // todo make cleaner
+				var variable = context.findVariable(node.name)
 					?: throw InterpreterException("no variable named ${node.name}") at node.range
 				
-				return if (node.params != null) {
+				
+				for (i in 0 until node.accessors.lastIndex) {
+					variable = if (node.accessors[i].second != null) {
+						val result = variable.invokeMember(
+							node.accessors[i].first,
+							Context(context, node.accessors[i].first).apply {
+								addVariable(ValueVariable("__params__", node.accessors[i].second!!.map(this@Interpreter::interpret), true))
+							}
+						)
+						ValueVariable("access", result)
+					} else {
+						val result = variable.getProperty(node.accessors[i].first)
+						ValueVariable("access", result)
+					}
+				}
+				
+				return if (node.accessors.last().second != null) {
 					variable.invokeMember(
-						Context(context, "${node.name}${node.member}").apply {
-							addVariable(ValueVariable("__params__", node.params.map(this@Interpreter::interpret), true))
+						node.accessors.last().first,
+						Context(context, node.accessors.last().first).apply {
+							addVariable(ValueVariable("__params__", node.accessors.last().second!!.map(this@Interpreter::interpret), true))
 						}
 					)
-				} else variable.getProperty(node.member)
+				} else variable.getProperty(node.accessors.last().first)
 			}
 			
 			is VariableDeclarationNode -> {
@@ -45,7 +62,7 @@ class Interpreter(private var context: Context) {
 			}
 			
 			is UnaryOperationNode -> {
-				when (node.operator) {
+				when (node.operator) { // fixme: result of function mustn't come across elvis operator
 					"!" -> return (interpret(node.operand) as? Boolean)?.not()
 						?: throw InterpreterException("operand of ! operator must be boolean") at node.range
 					
@@ -112,14 +129,14 @@ class Interpreter(private var context: Context) {
 								return value.also { variable.setValue(it) }
 							}
 							
-							is MemberAccessNode -> {
+							is MemberAccessNode -> { // todo make it work better
 								val variable = context.findVariable(leftNode.name)
 									?: throw InterpreterException("no variable named ${leftNode.name}") at leftNode.range
 								
-								leftNode.params then { throw InterpreterException("cannot assign to member invocation") at node.range }
+								leftNode.accessors.single().second then { throw InterpreterException("cannot assign to member invocation") at node.range }
 								
 								val value = interpret(rightNode)
-								return value.also { variable.setProperty(leftNode.member, it) }
+								return value.also { variable.setProperty(leftNode.accessors.single().first, it) }
 							}
 							
 							else -> throw InterpreterException("Left hand side in an assignment must be an identifier or member access") at leftNode.range
@@ -311,13 +328,9 @@ class Interpreter(private var context: Context) {
 					
 					breakable {
 						pushContext("if statement")
-						node.ifBranch.second.toMutableList().apply {
-							val lastNode = removeLast()
-							interpret()
-							val result = interpret(lastNode)
-							popContext()
-							return result
-						}
+						val result = node.ifBranch.second.interpretAndReturnLast()
+						popContext()
+						return result
 					} onBreak { popContext() }
 				} ?: throw InterpreterException("if condition must be boolean") at node.ifBranch.first.range
 				
@@ -327,13 +340,9 @@ class Interpreter(private var context: Context) {
 						
 						breakable {
 							pushContext("elif statement")
-							it.second.toMutableList().apply {
-								val lastNode = removeLast()
-								interpret()
-								val result = interpret(lastNode)
-								popContext()
-								return result
-							}
+							val result = it.second.interpretAndReturnLast()
+							popContext()
+							return result
 						} onBreak { popContext() }
 					} ?: throw InterpreterException("elif condition must be boolean") at it.first.range
 				}
@@ -341,13 +350,9 @@ class Interpreter(private var context: Context) {
 				node.elseBranch?.isNotEmpty()?.then {
 					breakable {
 						pushContext("else statement")
-						node.elseBranch.toMutableList().apply {
-							val lastNode = removeLast()
-							interpret()
-							val result = interpret(lastNode)
-							popContext()
-							return result
-						}
+						val result = node.elseBranch.interpretAndReturnLast()
+						popContext()
+						return result
 					} onBreak { popContext() }
 				}
 				
@@ -422,6 +427,19 @@ class Interpreter(private var context: Context) {
 					
 					"list" -> return node.body.map(this::interpret)
 					
+					"map" -> {
+						val map = mutableMapOf<String, Any?>()
+						for (i in node.body.indices step 2) {
+							val key = (interpret(node.body[i]) as? String)
+								?: throw InterpreterException("map key must be string") at node.body[i].range
+							val value = node.body.getOrNull(i + 1)?.let { interpret(it) }
+							
+							map[key] = value
+						}
+						
+						return map
+					}
+					
 					"lambda" -> return FunctionVariable("lambda${node.range}", listOf(), node.body)
 					
 					else -> throw InterpreterException("Named block with name '${node.name}' is not known") at node.range
@@ -440,16 +458,12 @@ class Interpreter(private var context: Context) {
 		context.parent?.let { context = it }
 	}
 	
-	@Suppress("NOTHING_TO_INLINE")
-	private inline fun List<Node>.interpret() = forEach(this@Interpreter::interpret)
+	private fun List<Node>.interpret() = forEach(this@Interpreter::interpret)
 	
-	private fun List<Node>.interpretAndReturnLast(): Any? { // todo make use of this all over interpreter
+	private fun List<Node>.interpretAndReturnLast(): Any? {
 		isEmpty() then { return null }
 		
-		toMutableList().run {
-			val lastNode = removeLast()
-			interpret()
-			return interpret(lastNode)
-		}
+		for (i in 0 until lastIndex) interpret(get(i))
+		return interpret(last())
 	}
 }

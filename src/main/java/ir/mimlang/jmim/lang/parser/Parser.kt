@@ -244,6 +244,7 @@ class Parser(tokens: List<Token>) {
 		val name = expectIdentifier() ?: run { restore(); return null }
 		val value = expectOperator("=")?.run {
 			expectNamedBlock()
+				?: expectIfStatement()
 				?: expectBinaryOperation()
 				?: expectUnaryOperation()
 				?: expectFunctionCall()
@@ -283,14 +284,37 @@ class Parser(tokens: List<Token>) {
 		save()
 		
 		val name = expectIdentifier() ?: run { restore(); return null }
+		
 		expectPropertyAccessor() ?: run { restore(); return null }
 		val member = expectIdentifier() ?: run { restore(); return null }
 		val params = expectParenthesizedParams()
+		var endRange = params?.second?.end ?: member.range.end
 		
-		val endPos = params?.second?.end ?: member.range.end
+		val moreAccessors = mutableListOf<Pair<String, List<Node>?>>()
+		while (true) {
+			save()
+			
+			if (expectPropertyAccessor() == null) {
+				restore()
+				break
+			}
+			
+			val chainedMember = expectIdentifier()
+			if (chainedMember == null) {
+				restore()
+				break
+			}
+			
+			val chainedMemberParams = expectParenthesizedParams()
+			endRange = chainedMemberParams?.second?.end ?: chainedMember.range.end
+			
+			removeSaved()
+			moreAccessors.add(chainedMember.name to chainedMemberParams?.first)
+		}
+		moreAccessors.add(0, member.name to params?.first)
 		
 		removeSaved()
-		return MemberAccessNode(name.name, member.name, params?.first, name.range.start..endPos)
+		return MemberAccessNode(name.name, moreAccessors, name.range.start..endRange) // todo make cleaner
 	}
 	
 	private fun expectUnaryOperation(): UnaryOperationNode? {
@@ -318,7 +342,8 @@ class Parser(tokens: List<Token>) {
 	private fun expectBinaryOperation(): BinaryOperationNode? {
 		save()
 		
-		val lhs = expectUnaryOperation()
+		val lhs = expectIfStatement()
+			?: expectUnaryOperation()
 			?: expectFunctionCall()
 			?: expectParenthesizedOperation()
 			?: expectMemberAccess()
@@ -331,6 +356,7 @@ class Parser(tokens: List<Token>) {
 			?: run { restore(); return null }
 		
 		val rhs = expectNamedBlock()
+			?: expectIfStatement()
 			?: expectBinaryOperation()
 			?: expectUnaryOperation()
 			?: expectFunctionCall()
@@ -352,6 +378,7 @@ class Parser(tokens: List<Token>) {
 			?: run { restore(); return null }
 		
 		val node = expectNamedBlock()
+			?: expectIfStatement()
 			?: expectBinaryOperation()
 			?: expectUnaryOperation()
 			?: expectFunctionCall()

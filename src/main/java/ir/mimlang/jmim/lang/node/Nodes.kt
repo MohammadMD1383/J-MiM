@@ -93,15 +93,9 @@ data class FunctionCallNode(
 
 data class MemberAccessNode(
 	val name: String,
-	val member: String,
-	val params: List<Node>?,
+	val accessors: List<Pair<String, List<Node>?>>,
 	override val range: TextRange
-) : Node {
-	override fun toString(): String {
-		val invocation = params?.let { "(${params.joinToString()})" } ?: ""
-		return "$name.$member$invocation"
-	}
-}
+) : Node // todo toString()
 
 data class IfStatementNode(
 	val ifBranch: Pair<Node, List<Node>>,

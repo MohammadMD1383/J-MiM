@@ -6,8 +6,6 @@ import ir.mimlang.jmim.lang.lexer.Lexer
 import ir.mimlang.jmim.lang.lexer.LexerException
 import ir.mimlang.jmim.lang.parser.Parser
 import ir.mimlang.jmim.lang.parser.ParserException
-import ir.mimlang.jmim.lang.std.Break
-import ir.mimlang.jmim.lang.std.Continue
 import ir.mimlang.jmim.lang.std.StdContext
 import ir.mimlang.jmim.util.color
 import ir.mimlang.jmim.util.ext.line
@@ -30,14 +28,14 @@ fun main(args: Array<String>) {
 	
 	val code =
 		"""
-			val a = list { run { 1 + 0; } 2; 3; };
-			stdstream = a.size;
-			stdstream++;
-			stdstream = a;
-		""".trimIndent() // todo add support for map
+			val a = map {
+				"i-1"; # -> # 1;
+				"i-2"; # -> # 2;
+			};
+			stdstream = a.get("i-3");
+		""".trimIndent()
 	
-	// todo add support for list.get()
-	// todo add support for map.get()
+	// todo: add methods for insert/delete/get/replace in (map and list and string)
 	
 	try { // todo make better error reporting
 		val tokens = Lexer(code).lex()
