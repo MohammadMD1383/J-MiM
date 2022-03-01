@@ -440,7 +440,7 @@ class Interpreter(private var context: Context) {
 						return map
 					}
 					
-					"lambda" -> return FunctionVariable("lambda${node.range}", listOf(), node.body)
+					"func" -> return FunctionVariable("lambda${node.range}", listOf(), node.body)
 					
 					else -> throw InterpreterException("Named block with name '${node.name}' is not known") at node.range
 				}
