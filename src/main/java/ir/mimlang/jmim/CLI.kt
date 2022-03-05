@@ -28,9 +28,9 @@ fun main(args: Array<String>) {
 	
 	val code =
 		"""
-			when (2) == {
-				case > (1) case < (5) { stdstream = "1"; }
-				case (6), case (7) { stdstream = "2"; }
+			when (6) == {
+				case > (1) case < (5) { stdstream = 1; }
+				case (6) case > (3+6), case (7) { stdstream = 2; }
 				default { stdstream = "default"; }
 			}
 		""".trimIndent() // todo test when expression

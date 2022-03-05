@@ -2,6 +2,7 @@ package ir.mimlang.jmim.lang.interpreter
 
 import ir.mimlang.jmim.lang.ctx.Context
 import ir.mimlang.jmim.lang.node.*
+import ir.mimlang.jmim.lang.std.False
 import ir.mimlang.jmim.lang.std.FunctionVariable
 import ir.mimlang.jmim.lang.std.ValueVariable
 import ir.mimlang.jmim.lang.util.ext.*
@@ -410,6 +411,29 @@ class Interpreter(private var context: Context) {
 				return null
 			}
 			
+			is WhenExpressionNode -> {
+				breakable {
+					pushContext("when expression")
+					
+					node.cases.forEach { fullCase ->
+						fullCase.condition.check(node.operand, node.comparator) then {
+							val result = fullCase.body.interpretAndReturnLast()
+							popContext()
+							return result
+						}
+					}
+					
+					val result = node.default?.interpretAndReturnLast()
+					popContext()
+					return result
+				} onBreak {
+					popContext()
+					return null
+				}
+				
+				return null
+			}
+			
 			is NamedBlockNode -> {
 				when (node.name) {
 					"repeat" -> {
@@ -474,5 +498,32 @@ class Interpreter(private var context: Context) {
 		
 		for (i in 0 until lastIndex) interpret(get(i))
 		return interpret(last())
+	}
+	
+	private fun CaseOrGroupNode.check(
+		operand: ParenthesizedOperationNode,
+		defaultComparator: String?
+	): Boolean {
+		val cond = groups.let orResult@{ orGroup ->
+			orGroup.forEach { andGroup ->
+				val andResult = andGroup.cases.let andResult@{ cases ->
+					cases.forEach { case ->
+						val caseResult = interpret(
+							BinaryOperationNode(
+								operand,
+								case.operator ?: defaultComparator ?: throw InterpreterException("no operator found to check case condition") at case.range,
+								case.operand,
+								case.range
+							)
+						) as Boolean
+						if (!caseResult) return@andResult false
+					}
+					return@andResult true
+				}
+				if (andResult) return@orResult true
+			}
+			return@orResult false
+		}
+		return cond
 	}
 }
