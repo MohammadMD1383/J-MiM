@@ -141,3 +141,33 @@ data class NamedBlockNode(
 ) : Node {
 	override fun toString(): String = "$name {\n${body.joinToString("\n").prependIndent("\t")}\n}"
 }
+
+data class WhenExpressionNode(
+	val operand: ParenthesizedOperationNode,
+	val comparator: String?,
+	val cases: List<FullCaseNode>,
+	val default: List<Node>?,
+	override val range: TextRange
+) : Node // todo
+
+data class CaseNode(
+	val operator: String?,
+	val operand: ParenthesizedOperationNode,
+	override val range: TextRange
+) : Node // todo toString
+
+data class CaseAndGroupNode(
+	val cases: List<CaseNode>,
+	override val range: TextRange
+) : Node // todo
+
+data class CaseOrGroupNode(
+	val groups: List<CaseAndGroupNode>,
+	override val range: TextRange
+) : Node // todo
+
+data class FullCaseNode(
+	val condition: CaseOrGroupNode,
+	val body: List<Node>,
+	override val range: TextRange
+) : Node // todo

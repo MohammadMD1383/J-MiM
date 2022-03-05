@@ -28,18 +28,19 @@ fun main(args: Array<String>) {
 	
 	val code =
 		"""
-			val a = map {
-				"i-1"; # -> # 1;
-				"i-2"; # -> # 2;
-			};
-			stdstream = a.get("i-3");
-		""".trimIndent()
+			when (2) == {
+				case > (1) case < (5) { stdstream = "1"; }
+				case (6), case (7) { stdstream = "2"; }
+				default { stdstream = "default"; }
+			}
+		""".trimIndent() // todo test when expression
 	
 	// todo: add methods for insert/delete/get/replace in (map and list and string)
 	
 	try { // todo make better error reporting
 		val tokens = Lexer(code).lex()
 		val nodes = Parser(tokens).parse()
+		// nodes.forEach(::println)
 		val context = StdContext("<code>")
 		val interpreter = Interpreter(context)
 		nodes.forEach(interpreter::interpret)

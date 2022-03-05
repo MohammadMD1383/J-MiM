@@ -54,6 +54,7 @@ class Parser(tokens: List<Token>) {
 	
 	private fun expectRoot() = expectNamedBlock()
 		?: expectLoopStatement()
+		?: expectWhenExpression()
 		?: expectIfStatement()
 		?: expectFunctionDeclaration()
 		?: expectVariableDeclaration()
@@ -107,6 +108,80 @@ class Parser(tokens: List<Token>) {
 		
 		removeSaved()
 		return RepeatLoopStatementNode(times, assignedTo?.name, body, repeatKw.range.start..repeatEndBracket.range.end)
+	}
+	
+	private fun expectWhenExpression(): WhenExpressionNode? {
+		save()
+		
+		val whenKw = expectKeyword("when") ?: run { restore(); return null }
+		val whenOperand = expectParenthesizedOperation() ?: run { restore(); return null }
+		val whenComparator = expectComparisonOperator()
+		
+		//todo make better
+		val whenLbr = expectLeftBracket()
+			?: throw ParserException("expected { for when expression body") at (whenComparator?.range ?: whenOperand.range)
+		
+		val whenCases = mutableListOf<FullCaseNode>().apply {
+			while (true) {
+				val orGroup = expectCaseOrGroup() ?: break
+				val body = expectRootBlock()
+					?: throw ParserException("expected block body after case") at orGroup.groups.last().range
+				
+				add(FullCaseNode(orGroup, body.first, orGroup.range.start..body.second.end))
+			}
+		}
+		
+		val default = expectKeyword("default")?.let {
+			expectRootBlock()?.first ?: throw ParserException("expected block body after default") at it.range
+		}
+		
+		val whenRbr = expectRightBracket()
+			?: throw ParserException("expected } at the end of the when expression") at (
+				default?.last()?.range
+					?: whenCases.lastOrNull()?.body?.last()?.range // todo make better
+					?: whenLbr.range
+				)
+		
+		removeSaved()
+		return WhenExpressionNode(whenOperand, whenComparator?.value, whenCases, default, whenKw.range.start..whenRbr.range.end)
+	}
+	
+	private fun expectCase(): CaseNode? {
+		save()
+		
+		val caseKw = expectKeyword("case") ?: run { restore(); return null }
+		val caseComparator = expectComparisonOperator()
+		val caseOperand = expectParenthesizedOperation() ?: run { restore(); return null }
+		
+		removeSaved()
+		return CaseNode(caseComparator?.value, caseOperand, caseKw.range.start..caseOperand.range.end)
+	}
+	
+	private fun expectCaseAndGroup(): CaseAndGroupNode? {
+		save()
+		
+		val cases = mutableListOf<CaseNode>().apply {
+			add(expectCase() ?: run { restore(); return null })
+			while (true) add(expectCase() ?: break)
+		}
+		
+		removeSaved()
+		return CaseAndGroupNode(cases, cases.first().range.start..cases.last().range.end)
+	}
+	
+	private fun expectCaseOrGroup(): CaseOrGroupNode? {
+		save()
+		
+		val cases = mutableListOf<CaseAndGroupNode>().apply {
+			add(expectCaseAndGroup() ?: run { restore(); return null })
+			while (true) {
+				expectSeparator() ?: break
+				add(expectCaseAndGroup() ?: break)
+			}
+		}
+		
+		removeSaved()
+		return CaseOrGroupNode(cases, cases.first().range.start..cases.last().range.end)
 	}
 	
 	private fun expectIfStatement(): IfStatementNode? { // todo add precise error reporting - make use of expectRootBlock if possible
@@ -438,13 +513,16 @@ class Parser(tokens: List<Token>) {
 	}
 	
 	private fun expectKeyword(kw: String): Token? =
-		if (peekedToken?.type == TType.ID && peekedToken!!.value == kw) nextToken else null
+		if (peekedToken?.type == TType.ID && peekedToken!!.value == kw) nextToken!! else null
 	
 	private fun expectOperator(op: String): Token? =
-		if (peekedToken?.type == TType.OP && peekedToken!!.value == op) nextToken else null
+		if (peekedToken?.type == TType.OP && peekedToken!!.value == op) nextToken!! else null
 	
 	private fun expectBinaryOperator(): Token? =
 		if (peekedToken?.type == TType.OP && peekedToken!!.value in BIN_OPS) nextToken!! else null
+	
+	private fun expectComparisonOperator(): Token? =
+		if (peekedToken?.type == TType.OP && peekedToken!!.value in COMP_OPS) nextToken!! else null
 	
 	private fun expectPrefixUnaryOperator(): Token? =
 		if (peekedToken?.type == TType.OP && peekedToken!!.value in PRE_UN_OPS) nextToken!! else null
@@ -452,7 +530,7 @@ class Parser(tokens: List<Token>) {
 	private fun expectPostfixUnaryOperator(): Token? =
 		if (peekedToken?.type == TType.OP && peekedToken!!.value in POS_UN_OPS) nextToken!! else null
 	
-	private fun expectToken(type: TType): Token? = if (peekedToken?.type == type) nextToken else null
+	private fun expectToken(type: TType): Token? = if (peekedToken?.type == type) nextToken!! else null
 	
 	private fun expectLeftParenthesis(): Token? = expectToken(TType.LPR)
 	private fun expectRightParenthesis(): Token? = expectToken(TType.RPR)

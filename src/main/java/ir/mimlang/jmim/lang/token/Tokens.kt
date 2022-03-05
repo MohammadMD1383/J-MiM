@@ -34,6 +34,11 @@ val BIN_OPS = listOf(
 	"<<", "<<=", ">>", ">>=", ">>>",
 	"~="
 )
+val COMP_OPS = listOf(
+	"==", "!=",
+	"&&", "||",
+	">", ">=", "<", "<="
+)
 
 infix fun MutableList<Token>.addIdentifier(builder: TokenBuilder) {
 	add(Token(TType.ID, builder.value, builder.range))

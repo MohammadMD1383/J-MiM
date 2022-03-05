@@ -331,7 +331,10 @@ class Interpreter(private var context: Context) {
 						val result = node.ifBranch.second.interpretAndReturnLast()
 						popContext()
 						return result
-					} onBreak { popContext() }
+					} onBreak {
+						popContext()
+						return null
+					}
 				} ?: throw InterpreterException("if condition must be boolean") at node.ifBranch.first.range
 				
 				node.elifBranches?.forEach {
@@ -343,7 +346,10 @@ class Interpreter(private var context: Context) {
 							val result = it.second.interpretAndReturnLast()
 							popContext()
 							return result
-						} onBreak { popContext() }
+						} onBreak {
+							popContext()
+							return null
+						}
 					} ?: throw InterpreterException("elif condition must be boolean") at it.first.range
 				}
 				
@@ -353,7 +359,10 @@ class Interpreter(private var context: Context) {
 						val result = node.elseBranch.interpretAndReturnLast()
 						popContext()
 						return result
-					} onBreak { popContext() }
+					} onBreak {
+						popContext()
+						return null
+					}
 				}
 				
 				return null
