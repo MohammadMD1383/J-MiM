@@ -96,7 +96,16 @@ class Lexer {
 					if (peekedChar in COMMENT_CHAR) append(nextChar)
 				}.locatedFrom(startingPosition to currentPosition)
 				
-				in PROPERTY_ACCESSOR_CHAR -> tokens addPropertyAccessor currentChar!!.locatedAt(currentPosition)
+				in PROPERTY_ACCESSOR_CHAR -> {
+					if (peekedChar in PROPERTY_ACCESSOR_CHAR) {
+						tokens addRangeBuilder currentChar!!.builder().apply {
+							append(nextChar)
+						}.locatedFrom(startingPosition to currentPosition)
+					}
+					
+					tokens addPropertyAccessor currentChar!!.locatedAt(currentPosition)
+				}
+				
 				in SEPARATOR_CHAR -> tokens addSeparator currentChar!!.locatedAt(currentPosition)
 				in EOS_CHAR -> tokens addEndOfStatement currentChar!!.locatedAt(currentPosition)
 				in LPR_CHAR -> tokens addLeftParenthesis currentChar!!.locatedAt(currentPosition)

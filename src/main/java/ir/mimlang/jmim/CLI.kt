@@ -1,18 +1,13 @@
 package ir.mimlang.jmim
 
 import ir.mimlang.jmim.lang.interpreter.Interpreter
-import ir.mimlang.jmim.lang.interpreter.InterpreterException
 import ir.mimlang.jmim.lang.lexer.Lexer
-import ir.mimlang.jmim.lang.lexer.LexerException
 import ir.mimlang.jmim.lang.parser.Parser
-import ir.mimlang.jmim.lang.parser.ParserException
 import ir.mimlang.jmim.lang.std.StdContext
-import ir.mimlang.jmim.util.color
-import ir.mimlang.jmim.util.ext.line
-import ir.mimlang.jmim.util.ext.lines
-import ir.mimlang.jmim.util.ext.times
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
+import java.io.File
+import kotlin.system.exitProcess
 
 
 fun main(args: Array<String>) {
@@ -20,31 +15,22 @@ fun main(args: Array<String>) {
 	val filename by parser.argument(ArgType.String, "file-name", "file to run")
 	
 	parser.parse(args)
-	// val file = File(filename)
-	// if (!file.exists()) {
-	// 	println("file $filename doesn't exist")
-	// 	exitProcess(1)
-	// }
-	
-	val code =
-		"""
-			when (6) == {
-				case > (1) case < (5) { stdstream = 1; }
-				case (6) case > (3+6), case (7) { stdstream = 2; }
-				default { stdstream = "default"; }
-			}
-		""".trimIndent() // todo test when expression
+	val file = File(filename)
+	if (!file.exists() || !file.isFile) {
+		println("file $filename doesn't exist")
+		exitProcess(1)
+	}
 	
 	// todo: add methods for insert/delete/get/replace in (map and list and string)
 	
 	try { // todo make better error reporting
-		val tokens = Lexer(code).lex()
+		val tokens = Lexer(file).lex()
 		val nodes = Parser(tokens).parse()
 		// nodes.forEach(::println)
 		val context = StdContext("<code>")
 		val interpreter = Interpreter(context)
 		nodes.forEach(interpreter::interpret)
-	} catch (e: LexerException) {
+	} /*catch (e: LexerException) {
 		println(
 			"""
 				${color.red}error while lexing file: ${color.bold}${e.message}${color.normal}
@@ -71,5 +57,6 @@ fun main(args: Array<String>) {
 			""".trimIndent()
 		)
 		e.printStackTrace()
+	}*/ catch (_: Exception) {
 	}
 }

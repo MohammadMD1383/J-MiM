@@ -134,19 +134,32 @@ data class WhileLoopStatementNode(
 	override fun toString(): String = "while ($condition) {\n${body.joinToString("\n").prependIndent("\t")}\n}"
 }
 
+data class ForLoopStatementNode(
+	val key: String?,
+	val value: String,
+	val iterable: Node,
+	val body: BlockNode,
+	override val range: TextRange
+) : Node
+
+data class BlockNode(
+	val nodes: List<Node>,
+	override val range: TextRange
+) : Node // todo
+
 data class NamedBlockNode(
 	val name: String,
-	val body: List<Node>,
+	val body: BlockNode,
 	override val range: TextRange
 ) : Node {
-	override fun toString(): String = "$name {\n${body.joinToString("\n").prependIndent("\t")}\n}"
+	override fun toString(): String = "$name {\n${body.nodes.joinToString("\n").prependIndent("\t")}\n}"
 }
 
 data class WhenExpressionNode(
 	val operand: ParenthesizedOperationNode,
 	val comparator: String?,
 	val cases: List<FullCaseNode>,
-	val default: List<Node>?,
+	val default: BlockNode?,
 	override val range: TextRange
 ) : Node // todo
 
@@ -168,6 +181,8 @@ data class CaseOrGroupNode(
 
 data class FullCaseNode(
 	val condition: CaseOrGroupNode,
-	val body: List<Node>,
+	val body: BlockNode,
 	override val range: TextRange
 ) : Node // todo
+
+// todo migrate to use BlockNode

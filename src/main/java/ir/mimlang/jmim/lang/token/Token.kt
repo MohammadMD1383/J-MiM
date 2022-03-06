@@ -16,6 +16,7 @@ data class Token(
 		RSTR("Raw String"),
 		EOS("End of Statement"),
 		PAC("Property Accessor"),
+		RNG("Range Builder"),
 		SEP("Separator"),
 		LPR("Left Parenthesis"),
 		RPR("Right Parenthesis"),

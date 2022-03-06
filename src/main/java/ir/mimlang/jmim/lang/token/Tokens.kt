@@ -69,6 +69,10 @@ infix fun MutableList<Token>.addPropertyAccessor(builder: TokenBuilder) {
 	add(Token(TType.PAC, builder.value, builder.range))
 }
 
+infix fun MutableList<Token>.addRangeBuilder(builder: TokenBuilder) {
+	add(Token(TType.RNG, builder.value, builder.range))
+}
+
 infix fun MutableList<Token>.addSeparator(builder: TokenBuilder) {
 	add(Token(TType.SEP, builder.value, builder.range))
 }

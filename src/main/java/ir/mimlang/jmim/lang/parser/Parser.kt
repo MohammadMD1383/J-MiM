@@ -67,11 +67,12 @@ class Parser(tokens: List<Token>) {
 		val body = expectRootBlock() ?: run { restore(); return null }
 		
 		removeSaved()
-		return NamedBlockNode(name.name, body.first, name.range.start..body.second.end)
+		return NamedBlockNode(name.name, body, name.range.start..body.range.end)
 	}
 	
 	private fun expectLoopStatement(): Node? = expectRepeatLoop()
 		?: expectWhileLoop()
+		?: expectForLoop()
 	
 	private fun expectWhileLoop(): WhileLoopStatementNode? {
 		save()
@@ -110,6 +111,37 @@ class Parser(tokens: List<Token>) {
 		return RepeatLoopStatementNode(times, assignedTo?.name, body, repeatKw.range.start..repeatEndBracket.range.end)
 	}
 	
+	// todo make precise error reporting for all methods
+	private fun expectForLoop(): ForLoopStatementNode? {
+		save()
+		
+		val forKw = expectKeyword("for") ?: run { restore(); return null }
+		val first = expectIdentifier() ?: run { restore(); return null }
+		val second = expectSeparator()?.let { expectIdentifier() }
+		val inKw = expectKeyword("in") ?: throw ParserException("expected 'in' keyword") at (second?.range ?: first.range)
+		val iterable = expectNamedBlock()
+			?: expectFunctionCall()
+			?: expectParenthesizedOperation()
+			?: expectMemberAccess()
+			?: expectIdentifier()
+			?: expectString()
+			?: throw ParserException("invalid token for iterable part of for loop") at inKw.range
+		val body = expectRootBlock() ?: throw ParserException("expected block body") at iterable.range
+		
+		val keyHolder: String?
+		val valueHolder: String
+		if (second != null) {
+			keyHolder = first.name
+			valueHolder = second.name
+		} else {
+			keyHolder = null
+			valueHolder = first.name
+		}
+		
+		removeSaved()
+		return ForLoopStatementNode(keyHolder, valueHolder, iterable, body, forKw.range.start..body.range.end)
+	}
+	
 	private fun expectWhenExpression(): WhenExpressionNode? {
 		save()
 		
@@ -127,18 +159,18 @@ class Parser(tokens: List<Token>) {
 				val body = expectRootBlock()
 					?: throw ParserException("expected block body after case") at orGroup.groups.last().range
 				
-				add(FullCaseNode(orGroup, body.first, orGroup.range.start..body.second.end))
+				add(FullCaseNode(orGroup, body, orGroup.range.start..body.range.end))
 			}
 		}
 		
 		val default = expectKeyword("default")?.let {
-			expectRootBlock()?.first ?: throw ParserException("expected block body after default") at it.range
+			expectRootBlock() ?: throw ParserException("expected block body after default") at it.range
 		}
 		
 		val whenRbr = expectRightBracket()
 			?: throw ParserException("expected } at the end of the when expression") at (
-				default?.last()?.range
-					?: whenCases.lastOrNull()?.body?.last()?.range // todo make better
+				default?.range
+					?: whenCases.lastOrNull()?.body?.range // todo make better
 					?: whenLbr.range
 				)
 		
@@ -264,11 +296,11 @@ class Parser(tokens: List<Token>) {
 		val endRange = when {
 			elseCaught -> elseRbr!!.range.end
 			elifRbr != null -> elifRbr.range.end
-			else -> ifBody.second.end
+			else -> ifBody.range.end
 		}
 		
 		removeSaved()
-		return IfStatementNode(ifCond to ifBody.first, elifStatements, elseStatements, ifKw.range.start..endRange)
+		return IfStatementNode(ifCond to ifBody.nodes, elifStatements, elseStatements, ifKw.range.start..endRange)
 	}
 	
 	private fun expectFunctionDeclaration(): FunctionDeclarationNode? {
@@ -471,7 +503,7 @@ class Parser(tokens: List<Token>) {
 		return ParenthesizedOperationNode(node, lpr.range.start..rpr.range.end)
 	}
 	
-	private fun expectRootBlock(): Pair<List<Node>, TextRange>? {
+	private fun expectRootBlock(): BlockNode? {
 		save()
 		
 		val lbr = expectLeftBracket() ?: run { restore(); return null }
@@ -481,7 +513,7 @@ class Parser(tokens: List<Token>) {
 		val rbr = expectRightBracket() ?: run { restore(); return null }
 		
 		removeSaved()
-		return body to lbr.range.start..rbr.range.end
+		return BlockNode(body, lbr.range.start..rbr.range.end)
 	}
 	
 	private fun expectParenthesizedParams(): Pair<List<Node>, TextRange>? {

@@ -1,8 +1,8 @@
 package ir.mimlang.jmim.lang.interpreter
 
 import ir.mimlang.jmim.lang.ctx.Context
+import ir.mimlang.jmim.lang.ctx.Variable
 import ir.mimlang.jmim.lang.node.*
-import ir.mimlang.jmim.lang.std.False
 import ir.mimlang.jmim.lang.std.FunctionVariable
 import ir.mimlang.jmim.lang.std.ValueVariable
 import ir.mimlang.jmim.lang.util.ext.*
@@ -411,19 +411,64 @@ class Interpreter(private var context: Context) {
 				return null
 			}
 			
+			is ForLoopStatementNode -> {
+				breakable {
+					val iterable = interpret(node.iterable)?.let { if (it is Variable) it.getValue() else it }
+					
+					if (node.key == null) {
+						when (iterable) {
+							is List<*> -> iterable.forEach {
+								continuable {
+									pushContext("for loop")
+									context.addVariable(ValueVariable(node.value, it, true))
+									node.body.nodes.interpret()
+									popContext()
+								} onContinue { popContext() }
+							}
+							
+							is String -> iterable.forEach {
+								continuable {
+									pushContext("for loop")
+									context.addVariable(ValueVariable(node.value, it, true))
+									node.body.nodes.interpret()
+									popContext()
+								} onContinue { popContext() }
+							}
+							
+							else -> throw InterpreterException("only lists and strings are allowed in value based for loop") at node.iterable.range
+						}
+					} else {
+						if (iterable is Map<*, *>) iterable.forEach { key, value ->
+							continuable {
+								pushContext("for loop")
+								context.addVariable(ValueVariable(node.key, key, true))
+								context.addVariable(ValueVariable(node.value, value, true))
+								node.body.nodes.interpret()
+								popContext()
+							} onContinue { popContext() }
+						} else throw InterpreterException("only maps are allowed in key-value based for loop") at node.iterable.range
+					}
+				} onBreak {
+					popContext()
+					return null
+				}
+				
+				return null
+			}
+			
 			is WhenExpressionNode -> {
 				breakable {
 					pushContext("when expression")
 					
 					node.cases.forEach { fullCase ->
 						fullCase.condition.check(node.operand, node.comparator) then {
-							val result = fullCase.body.interpretAndReturnLast()
+							val result = fullCase.body.nodes.interpretAndReturnLast()
 							popContext()
 							return result
 						}
 					}
 					
-					val result = node.default?.interpretAndReturnLast()
+					val result = node.default?.nodes?.interpretAndReturnLast()
 					popContext()
 					return result
 				} onBreak {
@@ -441,7 +486,7 @@ class Interpreter(private var context: Context) {
 							while (true) {
 								continuable {
 									pushContext("infinite repeat block")
-									node.body.interpret()
+									node.body.nodes.interpret()
 									popContext()
 								} onContinue { popContext() }
 							}
@@ -452,20 +497,20 @@ class Interpreter(private var context: Context) {
 					
 					"run" -> {
 						pushContext("run block")
-						val result = node.body.interpretAndReturnLast()
+						val result = node.body.nodes.interpretAndReturnLast()
 						popContext()
 						
 						return result
 					}
 					
-					"list" -> return node.body.map(this::interpret)
+					"list" -> return node.body.nodes.map(this::interpret)
 					
 					"map" -> {
 						val map = mutableMapOf<String, Any?>()
-						for (i in node.body.indices step 2) {
-							val key = (interpret(node.body[i]) as? String)
-								?: throw InterpreterException("map key must be string") at node.body[i].range
-							val value = node.body.getOrNull(i + 1)?.let { interpret(it) }
+						for (i in node.body.nodes.indices step 2) {
+							val key = (interpret(node.body.nodes[i]) as? String)
+								?: throw InterpreterException("map key must be string") at node.body.nodes[i].range
+							val value = node.body.nodes.getOrNull(i + 1)?.let { interpret(it) }
 							
 							map[key] = value
 						}
@@ -473,7 +518,7 @@ class Interpreter(private var context: Context) {
 						return map
 					}
 					
-					"func" -> return FunctionVariable("lambda${node.range}", listOf(), node.body)
+					"func" -> return FunctionVariable("lambda${node.range}", listOf(), node.body.nodes)
 					
 					else -> throw InterpreterException("Named block with name '${node.name}' is not known") at node.range
 				}

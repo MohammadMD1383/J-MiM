@@ -4,6 +4,7 @@ import ir.mimlang.jmim.lang.ctx.Context
 import ir.mimlang.jmim.lang.ctx.Variable
 import ir.mimlang.jmim.lang.interpreter.Interpreter
 import ir.mimlang.jmim.lang.node.Node
+import ir.mimlang.jmim.lang.util.ext.breakable
 import ir.mimlang.jmim.lang.util.ext.then
 
 class FunctionVariable(
@@ -18,10 +19,13 @@ class FunctionVariable(
 		val interpreter = Interpreter(context)
 		val lastNode = body.lastOrNull() ?: return null
 		
-		for (i in 0 until body.lastIndex) {
-			interpreter.interpret(body[i])
+		breakable(true) {
+			for (i in 0 until body.lastIndex) {
+				interpreter.interpret(body[i])
+			}
+			return interpreter.interpret(lastNode)
 		}
 		
-		return interpreter.interpret(lastNode)
+		return null
 	}
 }
