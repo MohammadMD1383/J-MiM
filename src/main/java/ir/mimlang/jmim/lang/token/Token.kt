@@ -27,5 +27,5 @@ data class Token(
 		override fun toString(): String = repr
 	}
 	
-	override fun toString(): String = "[$type: $value]"
+	override fun toString(): String = "[$type: $value] at $range"
 }

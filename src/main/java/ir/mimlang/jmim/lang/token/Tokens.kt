@@ -1,3 +1,5 @@
+@file:Suppress("NOTHING_TO_INLINE")
+
 package ir.mimlang.jmim.lang.token
 
 import ir.mimlang.jmim.lang.util.ext.equals
@@ -40,60 +42,60 @@ val COMP_OPS = listOf(
 	">", ">=", "<", "<="
 )
 
-infix fun MutableList<Token>.addIdentifier(builder: TokenBuilder) {
+inline infix fun MutableList<Token>.addIdentifier(builder: TokenBuilder) {
 	add(Token(TType.ID, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addNumber(builder: TokenBuilder) {
+inline infix fun MutableList<Token>.addNumber(builder: TokenBuilder) {
 	val type = if ('.' in builder.value) TType.FLT else TType.INT
 	add(Token(type, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addOperator(builder: TokenBuilder) {
+inline infix fun MutableList<Token>.addOperator(builder: TokenBuilder) {
 	add(Token(TType.OP, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addString(builder: TokenBuilder) {
+inline infix fun MutableList<Token>.addString(builder: TokenBuilder) {
 	add(Token(TType.STR, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addRawString(builder: TokenBuilder) {
+inline infix fun MutableList<Token>.addRawString(builder: TokenBuilder) {
 	add(Token(TType.RSTR, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addEndOfStatement(builder: TokenBuilder) {
+inline infix fun MutableList<Token>.addEndOfStatement(builder: TokenBuilder) {
 	add(Token(TType.EOS, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addPropertyAccessor(builder: TokenBuilder) {
+inline infix fun MutableList<Token>.addPropertyAccessor(builder: TokenBuilder) {
 	add(Token(TType.PAC, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addRangeBuilder(builder: TokenBuilder) {
+inline infix fun MutableList<Token>.addRangeBuilder(builder: TokenBuilder) {
 	add(Token(TType.RNG, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addSeparator(builder: TokenBuilder) {
+inline infix fun MutableList<Token>.addSeparator(builder: TokenBuilder) {
 	add(Token(TType.SEP, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addLeftParenthesis(builder: TokenBuilder) {
+inline infix fun MutableList<Token>.addLeftParenthesis(builder: TokenBuilder) {
 	add(Token(TType.LPR, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addRightParenthesis(builder: TokenBuilder) {
+inline infix fun MutableList<Token>.addRightParenthesis(builder: TokenBuilder) {
 	add(Token(TType.RPR, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addLeftBracket(builder: TokenBuilder) {
+inline infix fun MutableList<Token>.addLeftBracket(builder: TokenBuilder) {
 	add(Token(TType.LBR, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addRightBracket(builder: TokenBuilder) {
+inline infix fun MutableList<Token>.addRightBracket(builder: TokenBuilder) {
 	add(Token(TType.RBR, builder.value, builder.range))
 }
 
-infix fun MutableList<Token>.addComment(builder: TokenBuilder) {
+inline infix fun MutableList<Token>.addComment(builder: TokenBuilder) {
 	add(Token(TType.CMT, builder.value, builder.range))
 }
 

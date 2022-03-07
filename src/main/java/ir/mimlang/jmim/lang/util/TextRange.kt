@@ -4,5 +4,5 @@ data class TextRange(
 	val start: Position,
 	val end: Position
 ) {
-	override fun toString(): String = "[$start..$end]"
+	override fun toString(): String = if (start == end) start.toString() else "[$start..$end]"
 }
