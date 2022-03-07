@@ -47,7 +47,7 @@ data class UnaryOperationNode(
 	override fun toString(): String {
 		val prefixed = if (isPrefixed) " (prefixed)" else ""
 		val detail = "operator: $operator$prefixed\noperand: $operand"
-		return "BinaryOperation at $range:\n${detail.prependIndent(indent)}"
+		return "UnaryOperation at $range:\n${detail.prependIndent(indent)}"
 	}
 }
 
@@ -181,7 +181,9 @@ data class ForLoopStatementNode(
 	override fun toString(): String {
 		val type = (if (key == null) "value" else "key-value") + " based"
 		val detail =
-			"type: $type\niterable:\n${iterable.toString().prependIndent(indent)}\nbody:\n${body.nodes.joinToString("\n").prependIndent(indent)}"
+			"type: $type\nassigned key: ${key ?: "(empty)"}\nassigned value: $value\niterable:\n${
+				iterable.toString().prependIndent(indent)
+			}\nbody:\n${body.nodes.joinToString("\n").prependIndent(indent)}"
 		return "ForLoop at $range:\n${detail.prependIndent(indent)}"
 	}
 }
