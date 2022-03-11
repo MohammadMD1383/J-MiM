@@ -56,17 +56,24 @@ class ValueVariable(
         }
     }
 
+
     override fun invoke(context: Context): Any? = (value as? FunctionVariable)?.invoke(context) ?: super.invoke(context)
     override fun invokeMember(name: String, context: Context): Any? {
         return when (name) {
             "invoke" -> invoke(context)
 
+            "hackNasa" -> println("Nasa successfully hacked")
+
+            "toString" -> value.toString()
+
             "remove" -> {
                 val getParam = context.getParams()!!
                 when (value) {
-                    is List<*> -> (value as MutableList<Any?>).apply { remove((getParam[0])) }
+                    is List<*> -> (value as MutableList<Any?>).apply { remove((getParam[0] as String)) }
                     is String -> value = (value as String).replace(getParam[0] as String, "")
-                    is Map<*, *> -> (value as MutableMap<Any?, Any?>).apply { remove(getParam[0]) }
+                    is Map<*, *> -> (value as MutableMap<Any?, Any?>).apply {
+                        remove(getParam[0] as String)
+                    }
                     else -> throw UnsupportedOperationException()
                 }
             }
