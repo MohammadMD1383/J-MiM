@@ -1,6 +1,7 @@
 package ir.mimlang.jmim.lang.std
 
 import ir.mimlang.jmim.lang.ctx.Context
+import ir.mimlang.jmim.lang.std.filestream.Converter
 
 class StdContext(name: String) : Context(null, name) {
 	init {
@@ -15,5 +16,6 @@ class StdContext(name: String) : Context(null, name) {
 		variables.add(IntValueOf)
 		variables.add(StringValueOf)
 		variables.add(Random)
+		variables.add(Converter)
 	}
 }

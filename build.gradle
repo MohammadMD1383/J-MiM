@@ -1,6 +1,6 @@
 plugins {
-	id 'org.jetbrains.kotlin.jvm' version '1.6.10'
-	id 'java'
+    id 'org.jetbrains.kotlin.jvm' version '1.6.10'
+    id 'java'
 }
 
 group 'ir.mimlang.jmim'
@@ -10,34 +10,35 @@ sourceCompatibility = JavaVersion.VERSION_17.toString()
 targetCompatibility = JavaVersion.VERSION_17.toString()
 
 repositories {
-	mavenCentral()
-	mavenCentral()
+    mavenCentral()
+    mavenCentral()
 }
 
 dependencies {
-	implementation "org.jetbrains.kotlin:kotlin-stdlib"
-	implementation "org.jetbrains.kotlinx:kotlinx-cli:0.3.4"
-	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
-	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+    implementation 'org.json:json:20211205'
+    implementation "org.jetbrains.kotlinx:kotlinx-cli:0.3.4"
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
 }
 
 compileKotlin {
-	sourceCompatibility = JavaVersion.VERSION_17.toString()
-	targetCompatibility = JavaVersion.VERSION_17.toString()
-	
-	kotlinOptions {
-		jvmTarget = JavaVersion.VERSION_17.toString()
-	}
+    sourceCompatibility = JavaVersion.VERSION_17.toString()
+    targetCompatibility = JavaVersion.VERSION_17.toString()
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17.toString()
+    }
 }
 
 jar {
-	manifest {
-		attributes(
-			'Main-Class': 'ir.mimlang.jmim.CLIKt'
-		)
-	}
+    manifest {
+        attributes(
+                'Main-Class': 'ir.mimlang.jmim.CLIKt'
+        )
+    }
 }
 
 test {
-	useJUnitPlatform()
+    useJUnitPlatform()
 }
