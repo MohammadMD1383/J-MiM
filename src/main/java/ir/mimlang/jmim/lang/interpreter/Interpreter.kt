@@ -397,7 +397,7 @@ class Interpreter(private var context: Context) {
 					while (loop) {
 						continuable {
 							val cond = interpret(node.condition) as? Boolean
-								?: throw InterpreterException("condition of while loop must be boolean value") at node.condition.range
+								?: throw InterpreterException("condition of while loop must be boolean") at node.condition.range
 							
 							if (cond) {
 								pushContext("while loop")
@@ -406,6 +406,26 @@ class Interpreter(private var context: Context) {
 							} else loop = false
 						} onContinue { popContext() }
 					}
+				} onBreak { popContext() }
+				
+				return null
+			}
+			
+			is DoWhileLoopStatementNode -> {
+				breakable {
+					var loop = true
+					do {
+						continuable {
+							val cond = interpret(node.condition) as? Boolean
+								?: throw InterpreterException("condition of do-while loop must be boolean") at node.condition.range
+							
+							if (cond) {
+								pushContext("do-while loop")
+								node.body.nodes.interpret()
+								popContext()
+							} else loop = false
+						} onContinue { popContext() }
+					} while (loop)
 				} onBreak { popContext() }
 				
 				return null

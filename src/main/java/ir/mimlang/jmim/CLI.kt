@@ -24,7 +24,7 @@ fun main(args: Array<String>) {
 	
 	val file = File(filename)
 	if (!file.exists() || !file.isFile) {
-		println("file $filename doesn't exist")
+		println("file '$filename' doesn't exist")
 		exitProcess(1)
 	}
 	

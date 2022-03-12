@@ -9,45 +9,53 @@ class ValueVariable(
 	private var value: Any? = null,
 	private val isConst: Boolean = false
 ) : Variable {
-	override fun getValue(): Any? = value
+	init {
+		if (value is ValueVariable) throw IllegalArgumentException("ValueVariable cannot hold child of same type")
+	}
+	
+	override fun getValue(): Any? {
+		return if (value is Variable) (value as Variable).getValue() else value
+	}
+	
 	override fun setValue(value: Any?) {
-		isConst then { constThrow() }
+		if (this.value is Variable) return (this.value as Variable).setValue(value)
 		
+		isConst then { constThrow() }
 		this.value = value
 	}
 	
 	override fun decrement(returnBeforeJob: Boolean): Any? {
+		if (value is Variable) return (value as Variable).decrement(returnBeforeJob)
+		
 		isConst then { constThrow() }
-		
 		val initialValue = value
-		
 		value = when (value) {
 			is Long -> (value as Long).dec()
 			is Double -> (value as Double).dec()
 			else -> throw UnsupportedOperationException("operand of -- operator must be number")
 		}
-		
 		return if (returnBeforeJob) initialValue else value
 	}
 	
 	override fun increment(returnBeforeJob: Boolean): Any? {
+		if (value is Variable) return (value as Variable).increment(returnBeforeJob)
+		
 		isConst then { constThrow() }
-		
 		val initialValue = value
-		
 		value = when (value) {
 			is Long -> (value as Long).inc()
 			is Double -> (value as Double).inc()
 			else -> throw UnsupportedOperationException("operand of ++ operator must be number")
 		}
-		
 		return if (returnBeforeJob) initialValue else value
 	}
 	
-	override fun getProperty(name: String): Any {
+	override fun getProperty(name: String): Any? {
+		if (value is Variable) return (value as Variable).getProperty(name)
+		
 		when (name) {
 			"size" -> {
-				return (value as? Collection<*>)?.size
+				return (value as? List<*>)?.size
 					?: throw UnsupportedOperationException("property 'size' exists only for lists")
 			}
 			
@@ -55,8 +63,15 @@ class ValueVariable(
 		}
 	}
 	
-	override fun invoke(context: Context): Any? = (value as? FunctionVariable)?.invoke(context) ?: super.invoke(context)
+	override fun setProperty(name: String, value: Any?) =
+		if (this.value is Variable) (this.value as Variable).setProperty(name, value) else super.setProperty(name, value)
+	
+	override fun invoke(context: Context): Any? = if (value is Variable) (value as Variable).invoke(context) else super.invoke(context)
+	
 	override fun invokeMember(name: String, context: Context): Any? {
+		if (value is Variable) return (value as Variable).invokeMember(name, context)
+		// fixme: if the user wants to invoke the value not invoke member ...
+		
 		return when (name) {
 			"invoke" -> invoke(context)
 			
@@ -68,7 +83,7 @@ class ValueVariable(
 					is Map<*, *> -> (value as Map<*, *>)[getParam as String]
 					is String -> (value as String)[(getParam as Long).toInt()]
 					
-					else -> throw UnsupportedOperationException("property 'size' exists only for lists")
+					else -> throw UnsupportedOperationException("method get exists only for lists, maps and strings")
 				}
 			}
 			

@@ -171,6 +171,17 @@ data class WhileLoopStatementNode(
 	}
 }
 
+data class DoWhileLoopStatementNode(
+	val condition: Node,
+	val body: BlockNode,
+	override val range: TextRange
+) : Node {
+	override fun toString(): String {
+		val detail = "condition:\n${condition.toString().prependIndent(indent)}\nbody:\n${body.nodes.joinToString("\n").prependIndent(indent)}"
+		return "DoWhileLoop at $range:\n${detail.prependIndent(indent)}"
+	}
+}
+
 data class ForLoopStatementNode(
 	val key: String?,
 	val value: String,

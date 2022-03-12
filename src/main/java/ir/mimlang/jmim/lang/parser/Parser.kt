@@ -52,8 +52,8 @@ class Parser(tokens: List<Token>) {
 		}
 	}
 	
-	private fun expectRoot() = expectNamedBlock()
-		?: expectLoopStatement()
+	private fun expectRoot() = expectLoopStatement()
+		?: expectNamedBlock()
 		?: expectWhenExpression()
 		?: expectIfStatement()
 		?: expectFunctionDeclaration()
@@ -72,6 +72,7 @@ class Parser(tokens: List<Token>) {
 	
 	private fun expectLoopStatement(): Node? = expectRepeatLoop()
 		?: expectWhileLoop()
+		?: expectDoWhileLoop()
 		?: expectForLoop()
 	
 	private fun expectWhileLoop(): WhileLoopStatementNode? {
@@ -87,6 +88,22 @@ class Parser(tokens: List<Token>) {
 		
 		removeSaved()
 		return WhileLoopStatementNode(condition, body, whileKw.range.start..whileEndBracket.range.end)
+	}
+	
+	private fun expectDoWhileLoop(): DoWhileLoopStatementNode? {
+		save()
+		
+		val doKw = expectKeyword("do") ?: run { restore(); return null }
+		val body = expectRootBlock() ?: run { restore(); return null }
+		val whileKw = expectKeyword("while")
+			?: throw ParserException("expected while keyword after do body in a do-while loop") at body.range
+		val condition = expectParenthesizedOperation()
+			?: throw ParserException("expected condition after while keyword in a do-while loop") at whileKw.range
+		val eos = expectEndOfStatement()
+			?: throw ParserException("expected ; at the end of do-while loop") at condition.range
+		
+		removeSaved()
+		return DoWhileLoopStatementNode(condition, body, doKw.range.start..eos.range.end)
 	}
 	
 	private fun expectRepeatLoop(): RepeatLoopStatementNode? {
