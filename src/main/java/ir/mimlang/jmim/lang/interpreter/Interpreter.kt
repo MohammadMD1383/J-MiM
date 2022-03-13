@@ -9,6 +9,7 @@ import ir.mimlang.jmim.lang.util.ext.*
 import kotlin.math.pow
 
 class Interpreter(private var context: Context) {
+	@Throws(Exception::class)
 	fun interpret(node: Node): Any? {
 		when (node) {
 			is StatementNode -> return interpret(node.node)

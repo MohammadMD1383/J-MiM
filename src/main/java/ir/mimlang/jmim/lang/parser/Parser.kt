@@ -42,6 +42,7 @@ class Parser(tokens: List<Token>) {
 		savedIndexes.removeLast()
 	}
 	
+	@Throws(Exception::class)
 	fun parse(): List<Node> = nodes.apply {
 		while (peekedToken != null) {
 			add(

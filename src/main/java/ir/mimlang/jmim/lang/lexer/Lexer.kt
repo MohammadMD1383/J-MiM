@@ -9,7 +9,6 @@ import ir.mimlang.jmim.lang.util.wrapper.column
 import ir.mimlang.jmim.lang.util.wrapper.line
 import java.io.BufferedReader
 import java.io.File
-import java.io.IOException
 
 @Suppress("BlockingMethodInNonBlockingContext")
 class Lexer {
@@ -17,11 +16,11 @@ class Lexer {
 	private val bufferedReader: BufferedReader
 	
 	constructor(file: File) {
-		bufferedReader = file.inputStream().bufferedReader()
+		bufferedReader = file.inputStream().bufferedReader(Charsets.UTF_8)
 	}
 	
 	constructor(str: String) {
-		bufferedReader = str.byteInputStream().bufferedReader()
+		bufferedReader = str.byteInputStream().bufferedReader(Charsets.UTF_8)
 	}
 	
 	private var line = 1.line
@@ -48,10 +47,7 @@ class Lexer {
 			}
 		}
 	
-	@Throws(
-		LexerException::class,
-		IOException::class
-	)
+	@Throws(Exception::class)
 	fun lex(): List<Token> {
 		while (nextChar != null) {
 			val startingPosition = column at line

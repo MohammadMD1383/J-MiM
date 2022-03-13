@@ -25,6 +25,7 @@ open class Context(
 	
 	fun getParams(): List<Any?>? = findVariable("__params__")?.getValue() as? List<Any?>
 	
+	@Throws(Exception::class)
 	fun unpackParams(names: List<String>) {
 		val params = getParams() ?: throw UnsupportedOperationException("couldn't find variable __params__ to unpack")
 		if (names.size != params.size) throw IllegalArgumentException("__params__ size differs from arguments size")

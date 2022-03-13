@@ -6,8 +6,8 @@ plugins {
 group 'ir.mimlang.jmim'
 version '1.0.0'
 
-sourceCompatibility = JavaVersion.VERSION_17.toString()
-targetCompatibility = JavaVersion.VERSION_17.toString()
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
 
 repositories {
 	mavenCentral()
@@ -22,11 +22,12 @@ dependencies {
 }
 
 compileKotlin {
-	sourceCompatibility = JavaVersion.VERSION_17.toString()
-	targetCompatibility = JavaVersion.VERSION_17.toString()
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
 	
 	kotlinOptions {
-		jvmTarget = JavaVersion.VERSION_17.toString()
+		jvmTarget = JavaVersion.VERSION_17
+		freeCompilerArgs = ["-Xjvm-default=all"]
 	}
 }
 

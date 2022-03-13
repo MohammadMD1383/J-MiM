@@ -13,10 +13,12 @@ class ValueVariable(
 		if (value is ValueVariable) throw IllegalArgumentException("ValueVariable cannot hold child of same type")
 	}
 	
+	@Throws(Exception::class)
 	override fun getValue(): Any? {
 		return if (value is Variable) (value as Variable).getValue() else value
 	}
 	
+	@Throws(Exception::class)
 	override fun setValue(value: Any?) {
 		if (this.value is Variable) return (this.value as Variable).setValue(value)
 		
@@ -24,6 +26,7 @@ class ValueVariable(
 		this.value = value
 	}
 	
+	@Throws(Exception::class)
 	override fun decrement(returnBeforeJob: Boolean): Any? {
 		if (value is Variable) return (value as Variable).decrement(returnBeforeJob)
 		
@@ -37,6 +40,7 @@ class ValueVariable(
 		return if (returnBeforeJob) initialValue else value
 	}
 	
+	@Throws(Exception::class)
 	override fun increment(returnBeforeJob: Boolean): Any? {
 		if (value is Variable) return (value as Variable).increment(returnBeforeJob)
 		
@@ -50,6 +54,7 @@ class ValueVariable(
 		return if (returnBeforeJob) initialValue else value
 	}
 	
+	@Throws(Exception::class)
 	override fun getProperty(name: String): Any? {
 		if (value is Variable) return (value as Variable).getProperty(name)
 		
@@ -63,11 +68,14 @@ class ValueVariable(
 		}
 	}
 	
+	@Throws(Exception::class)
 	override fun setProperty(name: String, value: Any?) =
 		if (this.value is Variable) (this.value as Variable).setProperty(name, value) else super.setProperty(name, value)
 	
+	@Throws(Exception::class)
 	override fun invoke(context: Context): Any? = if (value is Variable) (value as Variable).invoke(context) else super.invoke(context)
 	
+	@Throws(Exception::class)
 	override fun invokeMember(name: String, context: Context): Any? {
 		if (value is Variable) return (value as Variable).invokeMember(name, context)
 		// fixme: if the user wants to invoke the value not invoke member ...
